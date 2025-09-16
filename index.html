@@ -88,6 +88,12 @@
             <input id="p-link" name="link" type="url" placeholder="https://github.com/username/repo" />
             <div class="hint">* 비워도 등록됩니다.</div>
           </div>
+          <div>
+            <label for="p-tags">태그(쉼표 구분)</label>
+            <input id="p-tags" name="tags" type="text" placeholder="예: ar, firebase, esp32" />
+            <div class="hint">* 검색 시 #태그 로 필터링할 수 있어요.</div>
+          </div>
+
           <div class="row">
             <button type="submit">프로젝트 추가</button>
             <button type="reset" class="secondary">초기화</button>
@@ -119,9 +125,11 @@
     <section class="card" style="margin-top:16px;" aria-labelledby="list-title">
       <div class="section-title">
         <h2 id="list-title">프로젝트 목록</h2>
-        <div class="row">
-          <button id="btn-refresh" class="secondary">새로고침</button>
+        <div class="row" style="gap:8px; flex-wrap:wrap;">
+            <input id="search-input" type="text" placeholder="검색: 키워드 또는 #태그" style="min-width:220px; padding:8px 10px;">
+            <button id="btn-refresh" class="secondary">새로고침</button>
         </div>
+
       </div>
       <div id="project-list" class="list" aria-live="polite"></div>
     </section>
@@ -203,18 +211,21 @@
       const title = $('#p-title').value.trim();
       const desc = $('#p-desc').value.trim();
       const link = $('#p-link').value.trim();
+      const tags  = parseTags(($('#p-tags') && $('#p-tags').value) || '');
       if(!title || !desc){ return alert('제목과 설명은 필수입니다.'); }
 
       const now = new Date();
       try {
         await db.collection('projects').add({
-          title, desc, link: link || null,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          authorUid: user.uid,
-          authorName: user.displayName || '익명',
-          authorEmail: user.email || null,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            title, desc, link: link || null,
+            tags: tags || [],
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            authorUid: user.uid,
+            authorName: user.displayName || '익명',
+            authorEmail: user.email || null,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+
         form.reset();
         await loadProjects();
       } catch (e) {
@@ -224,19 +235,61 @@
 
     // ===== 4) 프로젝트 목록 로드 =====
     const listEl = $('#project-list');
-
+    let loadedProjects = [];
+const searchInput = $('#search-input');
     async function loadProjects(){
-      listEl.innerHTML = '<div class="muted">불러오는 중…</div>';
-      const snap = await db.collection('projects').orderBy('createdAt','desc').get();
-      listEl.innerHTML = '';
-      if(snap.empty){
-        listEl.innerHTML = '<div class="muted">아직 등록된 프로젝트가 없습니다.</div>';
-        return;
-      }
-      snap.forEach(doc => renderProject(doc.id, doc.data()));
-    }
+        listEl.innerHTML = '<div class="muted">불러오는 중…</div>';
+        const snap = await db.collection('projects').orderBy('createdAt','desc').limit(100).get();
+        loadedProjects = [];
+        snap.forEach(doc => loadedProjects.push({ id: doc.id, data: doc.data() }));
+        renderProjects(loadedProjects);
+        applyFilter(); // 현재 검색어가 있으면 필터 적용
+}
+
 
     $('#btn-refresh').addEventListener('click', loadProjects);
+
+    // 검색 핸들러 및 필터링
+    if (searchInput){
+      searchInput.addEventListener('input', applyFilter);
+    }
+
+    function renderProjects(list){
+      listEl.innerHTML = '';
+      if(!list || list.length===0){
+        listEl.innerHTML = '<div class="muted">조건에 맞는 프로젝트가 없습니다.</div>';
+        return;
+      }
+      list.forEach(({id, data})=> renderProject(id, data));
+    }
+
+    function parseTags(str=''){
+      return String(str)
+        .split(/[,\\s]+/)
+        .map(s => s.trim().replace(/^#/, '').toLowerCase())
+        .filter(Boolean)
+        .slice(0, 10);
+    }
+
+    function applyFilter(){
+      if (!searchInput){ renderProjects(loadedProjects); return; }
+      const q = searchInput.value.trim();
+      if (!q){ renderProjects(loadedProjects); return; }
+
+      const tokens = q.split(/\\s+/);
+      const tagFilters = tokens.filter(t => t.startsWith('#')).map(t => t.slice(1).toLowerCase());
+      const kwFilters  = tokens.filter(t => !t.startsWith('#')).map(t => t.toLowerCase());
+
+      const filtered = loadedProjects.filter(({data}) => {
+        const hay  = (data.title + ' ' + data.desc + ' ' + (data.authorName||'') + ' ' + (data.tags||[]).join(' ')).toLowerCase();
+        const tags = (data.tags || []).map(t => String(t).toLowerCase());
+        const okTags = tagFilters.length === 0 || tagFilters.every(t => tags.includes(t));
+        const okKw   = kwFilters.length === 0 || kwFilters.every(k => hay.includes(k));
+        return okTags && okKw;
+      });
+      renderProjects(filtered);
+    }
+
 
     function renderProject(id, data){
       const card = document.createElement('article');
@@ -276,6 +329,32 @@
         </div>
       `;
       listEl.appendChild(card);
+      // 태그 뱃지 주입 및 클릭 필터링
+        try{
+        const badges = card.querySelector('.badges');
+        if (badges && data.tags && data.tags.length){
+            const frag = document.createDocumentFragment();
+            data.tags.forEach(t=>{
+              const span = document.createElement('span');
+              span.className = 'chip tag-chip';
+              span.setAttribute('data-tag', t);
+              span.textContent = '#' + t;
+              frag.appendChild(span);
+            });
+            badges.appendChild(frag);
+            card.querySelectorAll('.tag-chip').forEach(el=>{
+              el.addEventListener('click', ()=>{
+                const t = el.getAttribute('data-tag');
+                if (searchInput){
+                  const exist = searchInput.value.trim();
+                  searchInput.value = exist ? (exist + ' #' + t) : ('#' + t);
+                  applyFilter();
+                }
+              });
+            });
+          }
+        }catch(err){ log('tag inject error', err); }
+
       // 댓글 로드 & 이벤트
       loadComments(id);
       $('#form-comment-' + id).addEventListener('submit', ev => addComment(ev, id));
