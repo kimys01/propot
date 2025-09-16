@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>프로젝트 허브 | GitHub Pages + Firebase</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #121a33;
+      --muted: #8aa0c7;
+      --text: #e9f0ff;
+      --accent: #6da7ff;
+      --accent-2: #8cffda;
+      --danger: #ff6c6c;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Apple SD Gothic Neo, Malgun Gothic, sans-serif; }
+    a { color: var(--accent-2); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { position: sticky; top: 0; backdrop-filter: blur(8px); background: #0b1020cc; border-bottom: 1px solid #1e2a55; z-index: 10; }
+    .wrap { max-width: 1024px; margin: 0 auto; padding: 16px 20px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .brand { font-weight: 800; letter-spacing: 0.2px; }
+    .tag { font-size: 12px; color: var(--muted); border: 1px solid #253159; padding: 2px 8px; border-radius: 999px; }
+    button, input, textarea, select { font: inherit; }
+    button { background: linear-gradient(135deg, var(--accent), #4f7fe0); color: #081225; border: 0; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-weight: 700; }
+    button.secondary { background: #1b2750; color: var(--text); border: 1px solid #2b3a78; }
+    button.ghost { background: transparent; color: var(--text); border: 1px solid #2b3a78; }
+    button.danger { background: #2a0f14; color: #ffc7c7; border: 1px solid #5a1e25; }
+    .card { background: var(--card); border: 1px solid #1d274b; border-radius: 16px; padding: 16px; }
+    .grid { display: grid; gap: 16px; }
+    .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    @media (max-width: 800px){ .grid.cols-2 { grid-template-columns: 1fr; } }
+    .muted { color: var(--muted); }
+    label { display: block; font-weight: 700; margin-bottom: 6px; color: #b7c6eb; }
+    input[type="text"], input[type="url"], textarea { width: 100%; background: #0d152e; color: var(--text); border: 1px solid #23305d; border-radius: 12px; padding: 10px 12px; }
+    textarea { min-height: 90px; resize: vertical; }
+    .list { display: grid; gap: 12px; }
+    .project { border: 1px solid #23305d; border-radius: 16px; padding: 14px; background: #0f1731; }
+    .project h3 { margin: 0 0 4px; }
+    .badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .chip { font-size: 12px; padding: 2px 8px; border: 1px solid #2b3a78; border-radius: 999px; color: #bcd0ff; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 8px; }
+    .hr { height: 1px; background: #1b2650; margin: 10px 0; border-radius: 999px; }
+    .comment { border-left: 2px solid #334388; padding-left: 10px; margin: 8px 0; }
+    .file-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #0c142c; border: 1px solid #23305d; border-radius: 12px; padding: 8px 10px; }
+    .right { text-align: right; }
+    .sr-only { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+    footer { color: #8aa0c7; padding: 32px 0; text-align: center; }
+    .warn { color: #ffbdbd; }
+    .hint { font-size: 12px; color: var(--muted); }
+    .flex { display: flex; gap: 8px; align-items: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap row">
+      <div class="row" style="gap:10px;">
+        <span class="brand">📁 프로젝트 허브</span>
+        <span class="tag">GitHub Pages + Firebase</span>
+      </div>
+      <div class="row" style="margin-left:auto;">
+        <span id="user-info" class="muted">로그인 필요</span>
+        <button id="btn-login" class="secondary">Google 로그인</button>
+        <button id="btn-logout" class="ghost" style="display:none;">로그아웃</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap" style="padding-top: 18px;">
+    <div class="grid cols-2">
+      <!-- 왼쪽: 프로젝트 추가 -->
+      <section class="card" aria-labelledby="add-project-title">
+        <h2 id="add-project-title">새 프로젝트 등록</h2>
+        <p class="muted" style="margin-top:-4px;">제목/설명/링크를 입력하면 목록에 추가됩니다. (작성자는 로그인 필요)</p>
+        <form id="form-project" class="grid" style="gap:10px;">
+          <div>
+            <label for="p-title">프로젝트 제목</label>
+            <input id="p-title" name="title" type="text" placeholder="예: 스마트 도어락 (K5 팀)" required />
+          </div>
+          <div>
+            <label for="p-desc">설명</label>
+            <textarea id="p-desc" name="desc" placeholder="핵심 기능, 사용 기술 등을 간단히 적으세요." required></textarea>
+          </div>
+          <div>
+            <label for="p-link">외부 링크 (GitHub/발표자료 등)</label>
+            <input id="p-link" name="link" type="url" placeholder="https://github.com/username/repo" />
+            <div class="hint">* 비워도 등록됩니다.</div>
+          </div>
+          <div class="row">
+            <button type="submit">프로젝트 추가</button>
+            <button type="reset" class="secondary">초기화</button>
+          </div>
+          <div class="hint">※ 스팸 방지를 위해 작성/수정/삭제는 로그인 사용자만 가능하도록 설정됩니다.</div>
+        </form>
+      </section>
+
+      <!-- 오른쪽: 공지 & 사용법 -->
+      <aside class="card">
+        <h2>페이지 안내</h2>
+        <ul>
+          <li>정적 호스팅: <strong>GitHub Pages</strong></li>
+          <li>인증/DB/파일: <strong>Firebase</strong> (Authentication, Firestore, Storage)</li>
+          <li>친구들도 로그인 후 의견(댓글) 및 파일 업로드 가능</li>
+        </ul>
+        <div class="hr"></div>
+        <h3>빠른 시작</h3>
+        <ol>
+          <li>Firebase 콘솔에서 웹 앱 생성 → 아래 <strong>firebaseConfig</strong> 채워넣기</li>
+          <li>Authentication에서 <em>Google</em> 제공자 활성화</li>
+          <li>Firestore/Storage 보안규칙을 예시대로 설정</li>
+          <li>이 HTML을 GitHub Pages에 배포</li>
+        </ol>
+        <p class="hint">* 아래 하단 "개발자 모드"에서 현재 환경 체크 가능</p>
+      </aside>
+    </div>
+
+    <section class="card" style="margin-top:16px;" aria-labelledby="list-title">
+      <div class="section-title">
+        <h2 id="list-title">프로젝트 목록</h2>
+        <div class="row">
+          <button id="btn-refresh" class="secondary">새로고침</button>
+        </div>
+      </div>
+      <div id="project-list" class="list" aria-live="polite"></div>
+    </section>
+
+    <section class="card" style="margin-top:16px;" aria-labelledby="dev-title">
+      <h2 id="dev-title">개발자 모드</h2>
+      <div id="dev-log" class="muted" style="white-space:pre-wrap;"></div>
+      <p class="hint">문제가 생기면 브라우저 콘솔(F12)도 함께 확인하세요.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div>© <span id="year"></span> 프로젝트 허브. 함께 만드는 포트폴리오 공간.</div>
+    </div>
+  </footer>
+
+  <!-- Firebase SDKs (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+  <script>
+    // ===== 0) 유틸 =====
+    const $ = (sel, el=document) => el.querySelector(sel);
+    const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+    const log = (...args) => { console.log(...args); const box = $('#dev-log'); if(box){ box.textContent += args.map(a=>typeof a==='string'?a:JSON.stringify(a,null,2)).join(' ') + "\n"; } };
+
+    // ===== 1) Firebase 초기화 (자신의 콘피그로 교체) =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",
+      authDomain: "propot-cc6bf.firebaseapp.com",
+      projectId: "propot-cc6bf",
+      storageBucket: "propot-cc6bf.firebasestorage.app",
+      appId: "1:30940698980:web:1729f30e68d3beb24ac271"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // ===== 2) 인증 (Google) =====
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const btnLogin = $('#btn-login');
+    const btnLogout = $('#btn-logout');
+    const userInfo = $('#user-info');
+
+    btnLogin.addEventListener('click', async () => {
+      try {
+        await auth.signInWithPopup(provider);
+      } catch (e) { alert('로그인 실패: ' + e.message); }
+    });
+    btnLogout.addEventListener('click', async () => {
+      await auth.signOut();
+    });
+
+    auth.onAuthStateChanged(user => {
+      if(user){
+        userInfo.textContent = `${user.displayName} (${user.email})`;
+        btnLogin.style.display = 'none';
+        btnLogout.style.display = '';
+        $('.hint').style.display = '';
+      } else {
+        userInfo.textContent = '로그인 필요';
+        btnLogin.style.display = '';
+        btnLogout.style.display = 'none';
+      }
+    });
+
+    // ===== 3) 프로젝트 추가 =====
+    const form = $('#form-project');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if(!user){ return alert('로그인이 필요합니다.'); }
+
+      const title = $('#p-title').value.trim();
+      const desc = $('#p-desc').value.trim();
+      const link = $('#p-link').value.trim();
+      if(!title || !desc){ return alert('제목과 설명은 필수입니다.'); }
+
+      const now = new Date();
+      try {
+        await db.collection('projects').add({
+          title, desc, link: link || null,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          authorUid: user.uid,
+          authorName: user.displayName || '익명',
+          authorEmail: user.email || null,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        form.reset();
+        await loadProjects();
+      } catch (e) {
+        alert('등록 실패: ' + e.message);
+      }
+    });
+
+    // ===== 4) 프로젝트 목록 로드 =====
+    const listEl = $('#project-list');
+
+    async function loadProjects(){
+      listEl.innerHTML = '<div class="muted">불러오는 중…</div>';
+      const snap = await db.collection('projects').orderBy('createdAt','desc').get();
+      listEl.innerHTML = '';
+      if(snap.empty){
+        listEl.innerHTML = '<div class="muted">아직 등록된 프로젝트가 없습니다.</div>';
+        return;
+      }
+      snap.forEach(doc => renderProject(doc.id, doc.data()));
+    }
+
+    $('#btn-refresh').addEventListener('click', loadProjects);
+
+    function renderProject(id, data){
+      const card = document.createElement('article');
+      card.className = 'project';
+      card.innerHTML = `
+        <div class="row" style="justify-content:space-between; align-items:flex-start;">
+          <div>
+            <h3>${escapeHtml(data.title)}</h3>
+            <div class="muted" style="margin-bottom:6px;">by ${escapeHtml(data.authorName || '익명')} · ${formatDate(data.createdAt)}</div>
+          </div>
+          <div class="badges">
+            ${data.link ? `<a class="chip" href="${escapeAttr(data.link)}" target="_blank" rel="noopener">외부 링크</a>` : ''}
+            <span class="chip">ID: ${id}</span>
+          </div>
+        </div>
+        <p>${escapeHtml(data.desc)}</p>
+        <div class="grid cols-2" style="margin-top:8px;">
+          <div>
+            <h4 style="margin:6px 0;">💬 댓글</h4>
+            <div class="list" id="comments-${id}"></div>
+            <form class="grid" id="form-comment-${id}" style="gap:8px; margin-top:8px;">
+              <label for="c-${id}" class="sr-only">댓글</label>
+              <textarea id="c-${id}" placeholder="의견을 남겨주세요 (로그인 필요)" required></textarea>
+              <div class="row">
+                <button type="submit" class="secondary">댓글 등록</button>
+              </div>
+            </form>
+          </div>
+          <div>
+            <h4 style="margin:6px 0;">📎 파일 업로드</h4>
+            <div class="list" id="files-${id}"></div>
+            <form class="row" id="form-file-${id}" style="margin-top:8px; flex-wrap:wrap;">
+              <input type="file" id="f-${id}" />
+              <button type="submit">업로드</button>
+            </form>
+          </div>
+        </div>
+      `;
+      listEl.appendChild(card);
+      // 댓글 로드 & 이벤트
+      loadComments(id);
+      $('#form-comment-' + id).addEventListener('submit', ev => addComment(ev, id));
+      // 파일 로드 & 이벤트
+      loadFiles(id);
+      $('#form-file-' + id).addEventListener('submit', ev => uploadFile(ev, id));
+    }
+
+    function formatDate(ts){
+      if(!ts) return '';
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleString();
+    }
+
+    function escapeHtml(str=''){
+      return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[s]));
+    }
+    function escapeAttr(str=''){
+      return String(str).replace(/["']/g, s => ({'"':'&quot;','\'':'&#39;'}[s]));
+    }
+
+    // ===== 5) 댓글 =====
+    async function loadComments(pid){
+      const box = $('#comments-' + pid);
+      box.innerHTML = '<div class="muted">불러오는 중…</div>';
+      const snap = await db.collection('projects').doc(pid).collection('comments').orderBy('createdAt','desc').limit(20).get();
+      box.innerHTML = '';
+      if(snap.empty){ box.innerHTML = '<div class="muted">아직 댓글이 없습니다.</div>'; return; }
+      snap.forEach(doc => {
+        const c = doc.data();
+        const el = document.createElement('div');
+        el.className = 'comment';
+        el.innerHTML = `<div class="muted" style="font-size:12px;">${escapeHtml(c.authorName || '익명')} · ${formatDate(c.createdAt)}</div><div>${escapeHtml(c.text)}</div>`;
+        box.appendChild(el);
+      });
+    }
+
+    async function addComment(e, pid){
+      e.preventDefault();
+      const user = auth.currentUser;
+      if(!user){ return alert('로그인이 필요합니다.'); }
+      const ta = $('#c-' + pid);
+      const text = ta.value.trim();
+      if(!text) return;
+      try {
+        await db.collection('projects').doc(pid).collection('comments').add({
+          text,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          authorUid: user.uid,
+          authorName: user.displayName || '익명'
+        });
+        ta.value = '';
+        loadComments(pid);
+      } catch (e) { alert('댓글 실패: ' + e.message); }
+    }
+
+    // ===== 6) 파일 업로드 =====
+    async function loadFiles(pid){
+      const box = $('#files-' + pid);
+      box.innerHTML = '<div class="muted">불러오는 중…</div>';
+      const snap = await db.collection('projects').doc(pid).collection('files').orderBy('createdAt','desc').limit(20).get();
+      box.innerHTML = '';
+      if(snap.empty){ box.innerHTML = '<div class="muted">업로드된 파일이 없습니다.</div>'; return; }
+      snap.forEach(doc => {
+        const f = doc.data();
+        const row = document.createElement('div');
+        row.className = 'file-row';
+        row.innerHTML = `<div class="muted">${escapeHtml(f.name)} (${(f.size||0)}B)</div><div class="row"><a href="${escapeAttr(f.url)}" target="_blank" rel="noopener">다운로드</a></div>`;
+        box.appendChild(row);
+      });
+    }
+
+    async function uploadFile(e, pid){
+      e.preventDefault();
+      const user = auth.currentUser;
+      if(!user){ return alert('로그인이 필요합니다.'); }
+      const input = $('#f-' + pid);
+      const file = input.files && input.files[0];
+      if(!file) return alert('파일을 선택하세요.');
+
+      if(file.size > 10 * 1024 * 1024){ // 10MB 제한
+        return alert('파일은 최대 10MB까지 업로드 가능합니다.');
+      }
+      const path = `uploads/${pid}/${Date.now()}_${file.name}`;
+      try {
+        const ref = storage.ref().child(path);
+        const snap = await ref.put(file, { customMetadata: { ownerUid: user.uid, ownerEmail: user.email || '' } });
+        const url = await snap.ref.getDownloadURL();
+        await db.collection('projects').doc(pid).collection('files').add({
+          name: file.name,
+          size: file.size,
+          contentType: file.type,
+          url,
+          storagePath: path,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          ownerUid: user.uid,
+          ownerName: user.displayName || '익명'
+        });
+        input.value = '';
+        loadFiles(pid);
+      } catch (e) { alert('업로드 실패: ' + e.message); }
+    }
+
+    // ===== 7) 초기 로드 =====
+    window.addEventListener('DOMContentLoaded', () => {
+      $('#year').textContent = new Date().getFullYear();
+      loadProjects();
+      log('Firebase 초기화 완료. 프로젝트를 불러옵니다…');
+      if(firebaseConfig.apiKey === 'YOUR_API_KEY'){
+        log('\n⚠️ 아직 firebaseConfig가 비어있습니다. Firebase 콘솔 값으로 교체하세요.');
+      }
+    });
+  </script>
+
+  <!-- Firestore & Storage 보안규칙 예시 (참고용 주석)
+  Firestore:
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /projects/{pid} {
+        allow read: if true; // 목록 공개
+        allow create: if request.auth != null && request.resource.data.authorUid == request.auth.uid;
+        allow update, delete: if request.auth != null && resource.data.authorUid == request.auth.uid;
+
+        match /comments/{cid} {
+          allow read: if true;
+          allow create: if request.auth != null && request.resource.data.authorUid == request.auth.uid && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000;
+          allow update, delete: if false; // 수정/삭제 막고 싶으면 false, 아니면 작성자 조건으로 변경
+        }
+        match /files/{fid} {
+          allow read: if true;
+          allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid && request.resource.data.size <= 10 * 1024 * 1024;
+          allow delete: if false; // 필요시 작성자 조건으로 허용
+        }
+      }
+    }
+  }
+
+  Storage:
+  rules_version = '2';
+  service firebase.storage {
+    match /b/{bucket}/o {
+      match /uploads/{pid}/{filename=**} {
+        allow read: if true;
+        allow write: if request.auth != null && request.resource.size < 10 * 1024 * 1024; // 10MB 이하
+      }
+    }
+  }
+  -->
+</body>
+</html>
