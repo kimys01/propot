@@ -28,6 +28,7 @@
     button.secondary { background: #1b2750; color: var(--text); border: 1px solid #2b3a78; }
     button.ghost { background: transparent; color: var(--text); border: 1px solid #2b3a78; }
     button.danger { background: #2a0f14; color: #ffc7c7; border: 1px solid #5a1e25; }
+    button.mini { padding: 6px 10px; border-radius: 10px; font-size: 12px; }
     .card { background: var(--card); border: 1px solid #1d274b; border-radius: 16px; padding: 16px; }
     .grid { display: grid; gap: 16px; }
     .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -51,6 +52,16 @@
     .warn { color: #ffbdbd; }
     .hint { font-size: 12px; color: var(--muted); }
     .flex { display: flex; gap: 8px; align-items: center; }
+      /* 우측 상단 고정 액션 버튼 */
+    .right-wrap{ position: relative; min-width: 240px; }
+    .manage{ position: absolute; top: -6px; right: -6px; display:flex; gap:6px; z-index:1; }
+    /* 액션이 겹치지 않도록 배지 영역에 우측 패딩 확보 */
+    .badges.has-actions{ padding-right: 190px; }
+    @media (max-width: 560px){
+      .right-wrap{ position: static; }
+      .manage{ position: static; margin-top: 6px; }
+      .badges.has-actions{ padding-right: 0; }
+    }
   </style>
 </head>
 <body>
@@ -126,10 +137,9 @@
       <div class="section-title">
         <h2 id="list-title">프로젝트 목록</h2>
         <div class="row" style="gap:8px; flex-wrap:wrap;">
-            <input id="search-input" type="text" placeholder="검색: 키워드 또는 #태그" style="min-width:220px; padding:8px 10px;">
-            <button id="btn-refresh" class="secondary">새로고침</button>
+          <input id="search-input" type="text" placeholder="검색: 키워드 또는 #태그" style="min-width:220px; padding:8px 10px;">
+          <button id="btn-refresh" class="secondary">새로고침</button>
         </div>
-
       </div>
       <div id="project-list" class="list" aria-live="polite"></div>
     </section>
@@ -173,6 +183,11 @@
     const db = firebase.firestore();
     const storage = firebase.storage();
 
+    // ===== roles(admin) =====
+    let currentUser = null;
+    let isAdmin = false; // roles/{uid} 문서가 있으면 true
+    const rolesRef = db.collection('roles');
+
     // ===== 2) 인증 (Google) =====
     const provider = new firebase.auth.GoogleAuthProvider();
     const btnLogin = $('#btn-login');
@@ -188,17 +203,22 @@
       await auth.signOut();
     });
 
-    auth.onAuthStateChanged(user => {
+    auth.onAuthStateChanged(async user => {
+      currentUser = user;
       if(user){
-        userInfo.textContent = `${user.displayName} (${user.email})`;
+        try{ const r = await rolesRef.doc(user.uid).get(); isAdmin = r.exists; } catch(e){ isAdmin = false; }
+        userInfo.textContent = `${user.displayName} (${user.email})${isAdmin ? ' · 관리자' : ''}`;
         btnLogin.style.display = 'none';
         btnLogout.style.display = '';
-        $('.hint').style.display = '';
+        const h = $('.hint'); if (h) h.style.display = '';
       } else {
+        isAdmin = false;
         userInfo.textContent = '로그인 필요';
         btnLogin.style.display = '';
         btnLogout.style.display = 'none';
       }
+      // 권한/사용자 변경 시 목록 새로고침(버튼 표시 갱신)
+      if (typeof loadProjects === 'function') loadProjects();
     });
 
     // ===== 3) 프로젝트 추가 =====
@@ -214,16 +234,15 @@
       const tags  = parseTags(($('#p-tags') && $('#p-tags').value) || '');
       if(!title || !desc){ return alert('제목과 설명은 필수입니다.'); }
 
-      const now = new Date();
       try {
         await db.collection('projects').add({
-            title, desc, link: link || null,
-            tags: tags || [],
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            authorUid: user.uid,
-            authorName: user.displayName || '익명',
-            authorEmail: user.email || null,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          title, desc, link: link || null,
+          tags: tags || [],
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          authorUid: user.uid,
+          authorName: user.displayName || '익명',
+          authorEmail: user.email || null,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
         form.reset();
@@ -236,23 +255,21 @@
     // ===== 4) 프로젝트 목록 로드 =====
     const listEl = $('#project-list');
     let loadedProjects = [];
-const searchInput = $('#search-input');
-    async function loadProjects(){
-        listEl.innerHTML = '<div class="muted">불러오는 중…</div>';
-        const snap = await db.collection('projects').orderBy('createdAt','desc').limit(100).get();
-        loadedProjects = [];
-        snap.forEach(doc => loadedProjects.push({ id: doc.id, data: doc.data() }));
-        renderProjects(loadedProjects);
-        applyFilter(); // 현재 검색어가 있으면 필터 적용
-}
+    const searchInput = $('#search-input');
 
+    async function loadProjects(){
+      listEl.innerHTML = '<div class="muted">불러오는 중…</div>';
+      const snap = await db.collection('projects').orderBy('createdAt','desc').limit(100).get();
+      loadedProjects = [];
+      snap.forEach(doc => loadedProjects.push({ id: doc.id, data: doc.data() }));
+      renderProjects(loadedProjects);
+      applyFilter(); // 현재 검색어가 있으면 필터 적용
+    }
 
     $('#btn-refresh').addEventListener('click', loadProjects);
 
     // 검색 핸들러 및 필터링
-    if (searchInput){
-      searchInput.addEventListener('input', applyFilter);
-    }
+    if (searchInput){ searchInput.addEventListener('input', applyFilter); }
 
     function renderProjects(list){
       listEl.innerHTML = '';
@@ -265,7 +282,7 @@ const searchInput = $('#search-input');
 
     function parseTags(str=''){
       return String(str)
-        .split(/[,\\s]+/)
+        .split(/[\,\s]+/) // 쉼표/공백 분리
         .map(s => s.trim().replace(/^#/, '').toLowerCase())
         .filter(Boolean)
         .slice(0, 10);
@@ -276,7 +293,7 @@ const searchInput = $('#search-input');
       const q = searchInput.value.trim();
       if (!q){ renderProjects(loadedProjects); return; }
 
-      const tokens = q.split(/\\s+/);
+      const tokens = q.split(/\s+/);
       const tagFilters = tokens.filter(t => t.startsWith('#')).map(t => t.slice(1).toLowerCase());
       const kwFilters  = tokens.filter(t => !t.startsWith('#')).map(t => t.toLowerCase());
 
@@ -290,22 +307,43 @@ const searchInput = $('#search-input');
       renderProjects(filtered);
     }
 
-
     function renderProject(id, data){
+      const canManage = currentUser && (currentUser.uid === data.authorUid || isAdmin);
       const card = document.createElement('article');
       card.className = 'project';
       card.innerHTML = `
         <div class="row" style="justify-content:space-between; align-items:flex-start;">
           <div>
-            <h3>${escapeHtml(data.title)}</h3>
-            <div class="muted" style="margin-bottom:6px;">by ${escapeHtml(data.authorName || '익명')} · ${formatDate(data.createdAt)}</div>
+            <div id="view-${id}-head">
+              <h3>${escapeHtml(data.title)}</h3>
+              <div class="muted" style="margin-bottom:6px;">by ${escapeHtml(data.authorName || '익명')} · ${formatDate(data.createdAt)}</div>
+            </div>
+            <form id="edit-${id}-form" class="grid" style="gap:8px; display:none;">
+              <label class="sr-only" for="e-title-${id}">제목</label>
+              <input id="e-title-${id}" type="text" value="${escapeAttr(data.title)}" required />
+              <label class="sr-only" for="e-desc-${id}">설명</label>
+              <textarea id="e-desc-${id}" required>${escapeHtml(data.desc)}</textarea>
+              <label class="sr-only" for="e-link-${id}">외부 링크</label>
+              <input id="e-link-${id}" type="url" value="${escapeAttr(data.link||'')}" />
+              <label class="sr-only" for="e-tags-${id}">태그</label>
+              <input id="e-tags-${id}" type="text" value="${escapeAttr((data.tags||[]).join(', '))}" placeholder="예: ar, firebase" />
+            </form>
           </div>
-          <div class="badges">
-            ${data.link ? `<a class="chip" href="${escapeAttr(data.link)}" target="_blank" rel="noopener">외부 링크</a>` : ''}
-            <span class="chip">ID: ${id}</span>
+          <div class="right-wrap">
+            <div class="badges has-actions">
+              ${data.link ? `<a class="chip" href="${escapeAttr(data.link)}" target="_blank" rel="noopener">외부 링크</a>` : ''}
+              <span class="chip">ID: ${id}</span>
+            </div>
+            ${canManage ? `
+              <div class="manage">
+                <button class="ghost mini" id="btn-edit-${id}">수정</button>
+                <button class="danger mini" id="btn-del-${id}">삭제</button>
+                <button class="secondary mini" id="btn-save-${id}" style="display:none;">저장</button>
+                <button class="ghost mini" id="btn-cancel-${id}" style="display:none;">취소</button>
+              </div>` : ''}
           </div>
         </div>
-        <p>${escapeHtml(data.desc)}</p>
+        <div id="view-${id}-desc"><p>${escapeHtml(data.desc)}</p></div>
         <div class="grid cols-2" style="margin-top:8px;">
           <div>
             <h4 style="margin:6px 0;">💬 댓글</h4>
@@ -329,38 +367,115 @@ const searchInput = $('#search-input');
         </div>
       `;
       listEl.appendChild(card);
+
+      // 관리 버튼 핸들러
+      if (canManage){
+        const btnEdit = document.getElementById(`btn-edit-${id}`);
+        const btnDel = document.getElementById(`btn-del-${id}`);
+        const btnSave = document.getElementById(`btn-save-${id}`);
+        const btnCancel = document.getElementById(`btn-cancel-${id}`);
+        const editForm = document.getElementById(`edit-${id}-form`);
+        const viewHead = document.getElementById(`view-${id}-head`);
+        const viewDesc = document.getElementById(`view-${id}-desc`);
+
+        const enterEdit = () => {
+          editForm.style.display = '';
+          viewHead.style.display = 'none';
+          viewDesc.style.display = 'none';
+          btnEdit.style.display = 'none';
+          btnDel.style.display = 'none';
+          btnSave.style.display = '';
+          btnCancel.style.display = '';
+        };
+        const exitEdit = () => {
+          editForm.style.display = 'none';
+          viewHead.style.display = '';
+          viewDesc.style.display = '';
+          btnEdit.style.display = '';
+          btnDel.style.display = '';
+          btnSave.style.display = 'none';
+          btnCancel.style.display = 'none';
+        };
+        const saveEdit = async () => {
+          const title = document.getElementById(`e-title-${id}`).value.trim();
+          const desc  = document.getElementById(`e-desc-${id}`).value.trim();
+          const link  = document.getElementById(`e-link-${id}`).value.trim();
+          const tagsV = document.getElementById(`e-tags-${id}`).value;
+          const tags  = parseTags(tagsV || '');
+          if(!title || !desc){ alert('제목/설명을 입력하세요.'); return; }
+          try{
+            await db.collection('projects').doc(id).update({
+              title, desc, link: link || null, tags: tags || [],
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await loadProjects();
+          }catch(e){ alert('수정 실패: ' + e.message); }
+        };
+        const deleteAll = async () => {
+          if(!confirm('프로젝트를 삭제하면 댓글/파일 정보도 함께 지워집니다. 진행할까요?')) return;
+          const ref = db.collection('projects').doc(id);
+          try{
+            // 댓글 삭제 (최대 500개 배치)
+            let snap = await ref.collection('comments').limit(500).get();
+            while(!snap.empty){
+              const batch = db.batch();
+              snap.docs.forEach(d=> batch.delete(d.ref));
+              await batch.commit();
+              snap = await ref.collection('comments').limit(500).get();
+            }
+            // 파일 문서 삭제 + 스토리지 삭제 시도(규칙상 업로더만 성공할 수 있음)
+            const filesSnap = await ref.collection('files').limit(500).get();
+            for (const d of filesSnap.docs){
+              const f = d.data();
+              if (f.storagePath){
+                try{ await storage.ref().child(f.storagePath).delete(); }
+                catch(err){ log('스토리지 삭제 실패(권한?):', err.message || err); }
+              }
+              await d.ref.delete();
+            }
+            await ref.delete();
+            await loadProjects();
+          }catch(e){ alert('삭제 실패: ' + e.message); }
+        };
+
+        if (btnEdit) btnEdit.addEventListener('click', enterEdit);
+        if (btnCancel) btnCancel.addEventListener('click', exitEdit);
+        if (btnSave) btnSave.addEventListener('click', saveEdit);
+        if (btnDel) btnDel.addEventListener('click', deleteAll);
+      }
+
       // 태그 뱃지 주입 및 클릭 필터링
-        try{
+      try{
         const badges = card.querySelector('.badges');
         if (badges && data.tags && data.tags.length){
-            const frag = document.createDocumentFragment();
-            data.tags.forEach(t=>{
-              const span = document.createElement('span');
-              span.className = 'chip tag-chip';
-              span.setAttribute('data-tag', t);
-              span.textContent = '#' + t;
-              frag.appendChild(span);
+          const frag = document.createDocumentFragment();
+          data.tags.forEach(t=>{
+            const span = document.createElement('span');
+            span.className = 'chip tag-chip';
+            span.setAttribute('data-tag', t);
+            span.textContent = '#' + t;
+            frag.appendChild(span);
+          });
+          badges.appendChild(frag);
+          card.querySelectorAll('.tag-chip').forEach(el=>{
+            el.addEventListener('click', ()=>{
+              const t = el.getAttribute('data-tag');
+              if (searchInput){
+                const exist = searchInput.value.trim();
+                searchInput.value = exist ? (exist + ' #' + t) : ('#' + t);
+                applyFilter();
+              }
             });
-            badges.appendChild(frag);
-            card.querySelectorAll('.tag-chip').forEach(el=>{
-              el.addEventListener('click', ()=>{
-                const t = el.getAttribute('data-tag');
-                if (searchInput){
-                  const exist = searchInput.value.trim();
-                  searchInput.value = exist ? (exist + ' #' + t) : ('#' + t);
-                  applyFilter();
-                }
-              });
-            });
-          }
-        }catch(err){ log('tag inject error', err); }
+          });
+        }
+      }catch(err){ log('tag inject error', err); }
 
       // 댓글 로드 & 이벤트
       loadComments(id);
-      $('#form-comment-' + id).addEventListener('submit', ev => addComment(ev, id));
+      document.getElementById('form-comment-' + id).addEventListener('submit', ev => addComment(ev, id));
       // 파일 로드 & 이벤트
       loadFiles(id);
-      $('#form-file-' + id).addEventListener('submit', ev => uploadFile(ev, id));
+      document.getElementById('form-file-' + id).addEventListener('submit', ev => uploadFile(ev, id));
     }
 
     function formatDate(ts){
@@ -469,26 +584,34 @@ const searchInput = $('#search-input');
     });
   </script>
 
-  <!-- Firestore & Storage 보안규칙 예시 (참고용 주석)
+  <!-- Firestore & Storage 보안규칙 예시 (관리자/작성자 권한 포함) -->
+  <!--
   Firestore:
   rules_version = '2';
   service cloud.firestore {
     match /databases/{database}/documents {
+      function isAdmin() {
+        return request.auth != null && exists(/databases/$(database)/documents/roles/$(request.auth.uid));
+      }
       match /projects/{pid} {
-        allow read: if true; // 목록 공개
+        allow read: if true;
         allow create: if request.auth != null && request.resource.data.authorUid == request.auth.uid;
-        allow update, delete: if request.auth != null && resource.data.authorUid == request.auth.uid;
-
+        allow update, delete: if request.auth != null && (resource.data.authorUid == request.auth.uid || isAdmin());
         match /comments/{cid} {
           allow read: if true;
           allow create: if request.auth != null && request.resource.data.authorUid == request.auth.uid && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000;
-          allow update, delete: if false; // 수정/삭제 막고 싶으면 false, 아니면 작성자 조건으로 변경
+          allow delete: if request.auth != null && (resource.data.authorUid == request.auth.uid || isAdmin());
+          allow update: if false;
         }
         match /files/{fid} {
           allow read: if true;
           allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid && request.resource.data.size <= 10 * 1024 * 1024;
-          allow delete: if false; // 필요시 작성자 조건으로 허용
+          allow delete: if request.auth != null && (resource.data.ownerUid == request.auth.uid || isAdmin());
         }
+      }
+      match /roles/{uid} {
+        allow read: if request.auth != null;
+        allow write: if false; // 콘솔에서만 관리 권장
       }
     }
   }
@@ -500,6 +623,8 @@ const searchInput = $('#search-input');
       match /uploads/{pid}/{filename=**} {
         allow read: if true;
         allow write: if request.auth != null && request.resource.size < 10 * 1024 * 1024; // 10MB 이하
+        // 삭제는 업로더만 허용하려면 아래처럼 조건 추가 (Storage에선 관리자 판별이 까다로움)
+        // allow delete: if request.auth != null && request.auth.uid == request.resource.metadata.ownerUid;
       }
     }
   }
