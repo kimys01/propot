@@ -20,17 +20,12 @@
   textarea{min-height:80px;resize:vertical}
   button{font:inherit;background:linear-gradient(135deg,var(--accent),#4f7fe0);color:#081225;border:0;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700}
   button.secondary{background:#1b2750;color:#e9f0ff;border:1px solid #2b3a78}
+  button.ghost{background:transparent;color:#e9f0ff;border:1px solid #2b3a78}
   button.danger{background:#2a0f14;color:#ffc7c7;border:1px solid #5a1e25}
-  button.mini{padding:6px 10px;border-radius:8px;font-size:12px}
   .chip{font-size:12px;padding:2px 8px;border:1px solid #2b3a78;border-radius:999px;color:#bcd0ff}
-  .thumb{width:160px;height:100px;border-radius:8px;object-fit:cover;border:1px solid #23305d}
-  /* 선택 모드: 체크박스 표시 */
-  .select-cb{display:none}
-  .selecting .select-cb{display:inline-block}
-  /* 상단 우측 고정 액션 */
-  .right-wrap{position:relative;min-width:240px}
-  .manage{position:absolute;top:-6px;right:-6px;display:flex;gap:6px;z-index:1}
-  @media (max-width:560px){.right-wrap{position:static}.manage{position:static;margin-top:6px}}
+  .comment{border-left:2px solid #334388;padding-left:10px;margin:8px 0}
+  .file-row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#0c142c;border:1px solid #23305d;border-radius:12px;padding:8px 10px}
+  .thumb{width:120px;height:76px;border-radius:8px;object-fit:cover;border:1px solid #23305d}
 </style>
 </head>
 <body>
@@ -87,32 +82,23 @@
   firebase.initializeApp(cfg);
   const auth=firebase.auth(), db=firebase.firestore(), storage=firebase.storage();
 
-  // ===== helpers =====
+  // ===== Helpers =====
   const $ = s=>document.querySelector(s);
-  const esc = s=>String(s||'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }[c]));
+  const esc = s=>String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   const parseTags = v=>String(v||'').split(/[, \t]+/).map(x=>x.trim().replace(/^#/,'').toLowerCase()).filter(Boolean).slice(0,10);
-  const fmt = ts => ts?.toDate ? ts.toDate().toLocaleString() : (ts? new Date(ts).toLocaleString() : '');
+  const fmt = ts => { if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleString(); };
 
-  // ===== route / owner =====
+  // ===== Owner (page) =====
   const params = new URLSearchParams(location.search);
   const ownerUid = params.get('uid');
   if(!ownerUid){ alert('잘못된 접근: uid가 없습니다.'); location.href='index.html'; }
   $('#owner-chip').textContent = `owner: ${ownerUid.slice(0,8)}…`;
-
-  // owner 이름 보이기(선택)
-  (async ()=>{
-    try{
-      const u = await db.collection('users').doc(ownerUid).get();
-      const strong = document.querySelector('header strong');
-      if(u.exists && strong){ strong.textContent = `${(u.data().displayName||'포트폴리오')}의 포트폴리오`; }
-    }catch{}
-  })();
-
   const shareUrl = `${location.origin}${location.pathname}?uid=${encodeURIComponent(ownerUid)}`;
   $('#btn-copy').onclick = async ()=>{ await navigator.clipboard.writeText(shareUrl); alert('공유 링크 복사됨'); };
 
-  // ===== auth / permission =====
+  // ===== Session =====
   let me=null, isAdmin=false, canWrite=false;
+
   $('#btn-login').onclick = ()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>alert(e.message));
   $('#btn-logout').onclick= ()=>auth.signOut();
   $('#btn-refresh').onclick= ()=>loadProjects();
@@ -122,7 +108,13 @@
     const isOwner = me.uid===ownerUid;
     let isFriend = false;
     if(!isOwner && !isAdmin){
-      try{ isFriend = (await db.collection('friends').doc(`${ownerUid}_${me.uid}`).get()).exists; }catch{}
+      try{
+        const q = await db.collection('friends')
+          .where('ownerUid','==',ownerUid)
+          .where('friendUid','==',me.uid)
+          .limit(1).get();
+        isFriend = !q.empty;
+      }catch(e){ console.warn('friend check error', e); }
     }
     canWrite = isOwner || isFriend || isAdmin;
     $('#write-hint').textContent = canWrite ? '작성 가능 사용자입니다.' : '작성 권한이 없습니다.';
@@ -138,495 +130,378 @@
     }else{
       $('#user-line').textContent='로그인 필요';
       $('#btn-login').style.display=''; $('#btn-logout').style.display='none';
+      isAdmin=false;
     }
     await computePermission();
     await loadProjects();
   });
 
-  // ===== list & render =====
+  // ===== Projects =====
   async function loadProjects(){
     const box = $('#list'); box.innerHTML='<div class="muted">불러오는 중…</div>';
     try{
-      const snap = await db.collection('projects').where('ownerUid','==',ownerUid).orderBy('createdAt','desc').limit(100).get();
+      const snap = await db.collection('projects')
+        .where('ownerUid','==',ownerUid)
+        .orderBy('createdAt','desc').limit(100).get();
       box.innerHTML='';
       if(snap.empty){ box.innerHTML='<div class="muted">아직 글이 없습니다.</div>'; return; }
       snap.forEach(doc=>renderProject(doc.id, doc.data()));
     }catch(e){
-      // composite index 없을 때 폴백
-      const snap2 = await db.collection('projects').where('ownerUid','==',ownerUid).get();
-      const list = snap2.docs.map(d=>({id:d.id, data:d.data()}))
-        .sort((a,b)=>(b.data.createdAt?.toMillis?.()||0)-(a.data.createdAt?.toMillis?.()||0));
-      box.innerHTML='';
-      if(!list.length){ box.innerHTML='<div class="muted">아직 글이 없습니다.</div>'; return; }
-      list.forEach(({id,data})=>renderProject(id,data));
+      const hint = e.message && e.message.includes('The query requires an index')
+        ? '<br/><span class="muted">⚠️ 인덱스 필요: 콘솔 링크로 생성 후 다시 시도하세요.</span>'
+        : '';
+      box.innerHTML=`<div class="muted">불러오기 실패: ${esc(e.message)}${hint}</div>`;
     }
   }
 
-  // 선택 상태 저장
-  const selComments = new Map(); // pid -> Set(cid)
-  const selFiles    = new Map(); // pid -> Set(fid)
-
   function renderProject(id, d){
     const mine = me && (me.uid===d.authorUid);
-    const allowManagePost = me && (mine || isAdmin);
+    const allowManage = me && (mine || isAdmin);
 
     const el = document.createElement('article');
     el.className='project';
     el.innerHTML = `
       <div class="row" style="justify-content:space-between;align-items:flex-start">
-        <div style="flex:1;">
-          <div id="view-${id}-head">
+        <div style="flex:1">
+          <div id="pv-${id}">
             <h3 style="margin:0">${esc(d.title)}</h3>
             <div class="muted" style="margin:2px 0 8px">${esc(d.authorName||'익명')} · ${fmt(d.createdAt)}</div>
-          </div>
-
-          <form id="edit-${id}-form" class="list" style="display:none">
-            <input id="e-title-${id}" type="text" value="${esc(d.title)}" required/>
-            <textarea id="e-desc-${id}" required>${esc(d.desc)}</textarea>
-            <input id="e-tags-${id}" type="text" value="${esc((d.tags||[]).join(', '))}" placeholder="태그(쉼표 구분) 예: ar, esp32"/>
-            <div class="row" style="gap:8px;align-items:center">
-              <input type="file" id="e-mainfile-${id}" style="flex:1"/>
-              ${d.mainFile?.url ? `<a class="chip" href="${d.mainFile.url}" target="_blank" rel="noopener">현재 첨부 열기</a>`:''}
-              ${d.mainFile ? `<button class="danger mini" type="button" id="e-mainfile-del-${id}">첨부 삭제</button>`:''}
-              <button class="secondary mini" type="button" id="e-mainfile-up-${id}">첨부 교체 업로드</button>
-            </div>
-          </form>
-
-          <div id="view-${id}-desc">
             <p style="margin:0">${esc(d.desc)}</p>
             ${(d.tags&&d.tags.length)?`<div class="row" style="gap:6px;margin-top:6px">${d.tags.map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}</div>`:''}
             ${d.mainFile?.url?`<div style="margin-top:6px"><a class="chip" href="${d.mainFile.url}" target="_blank" rel="noopener">첨부 보기</a></div>`:''}
           </div>
-        </div>
 
-        <div class="right-wrap">
-          ${allowManagePost?`
-          <div class="manage">
-            <button class="ghost mini"    id="btn-edit-${id}">수정</button>
-            <button class="danger mini"   id="btn-del-${id}">삭제</button>
-            <button class="secondary mini" id="btn-save-${id}" style="display:none">저장</button>
-            <button class="ghost mini"     id="btn-cancel-${id}" style="display:none">취소</button>
-          </div>`:''}
+          <form id="pe-${id}" class="list" style="display:none; margin-top:6px">
+            <input id="e-title-${id}" value="${esc(d.title)}" required/>
+            <textarea id="e-desc-${id}" required>${esc(d.desc)}</textarea>
+            <div class="row" style="gap:6px">
+              <button type="button" class="secondary" id="save-${id}">저장</button>
+              <button type="button" class="ghost" id="cancel-${id}">취소</button>
+            </div>
+          </form>
+        </div>
+        <div class="row" style="gap:6px">
+          ${allowManage?`
+            <button class="secondary" id="edit-${id}">수정</button>
+            <button class="danger" id="del-${id}">삭제</button>
+          `:''}
         </div>
       </div>
 
-      <!-- 댓글 섹션 -->
-      <div class="card" style="margin-top:10px; background:#0f1731; border-color:#23305d;">
-        <h4 style="margin:0 0 8px">💬 댓글</h4>
-        <div class="row" id="c-toolbar-${id}" style="gap:6px; flex-wrap:wrap;">
-          <button class="ghost mini" id="c-enter-${id}">선택</button>
-          <button class="secondary mini" id="c-edit-${id}" style="display:none;" disabled>선택 수정(1개)</button>
-          <button class="danger mini"    id="c-del-${id}"  style="display:none;" disabled>선택 삭제</button>
-          <span class="muted" id="c-count-${id}" style="display:none;">0개 선택</span>
-          <button class="ghost mini" id="c-cancel-${id}" style="display:none;">취소</button>
+      <div class="row" style="gap:16px; margin-top:14px; align-items:flex-start; flex-wrap:wrap">
+        <!-- 댓글 -->
+        <div style="flex:1; min-width:280px">
+          <h4 style="margin:0 0 6px">💬 댓글</h4>
+          <div id="clist-${id}" class="list"></div>
+          <form id="cform-${id}" class="list" style="margin-top:8px; ${canWrite?'':'display:none'}">
+            <textarea id="cnew-${id}" placeholder="의견을 남겨주세요" required></textarea>
+            <div class="row"><button type="submit" class="secondary">댓글 등록</button></div>
+          </form>
         </div>
-        <div id="comments-${id}" class="list" style="margin-top:8px"></div>
-        <form class="list" id="form-comment-${id}" style="margin-top:6px">
-          <textarea id="c-${id}" placeholder="댓글 입력(로그인 필요)" required></textarea>
-          <div class="row"><button type="submit" class="secondary">댓글 등록</button></div>
-        </form>
-      </div>
 
-      <!-- 파일 섹션 -->
-      <div class="card" style="margin-top:10px; background:#0f1731; border-color:#23305d;">
-        <h4 style="margin:0 0 8px">📎 파일</h4>
-        <div class="row" id="f-toolbar-${id}" style="gap:6px; flex-wrap:wrap;">
-          <button class="ghost mini" id="f-enter-${id}">선택</button>
-          <button class="secondary mini" id="f-rename-${id}"  style="display:none;" disabled>이름수정(1개)</button>
-          <input type="file" id="f-repl-input-${id}" style="display:none"/>
-          <button class="secondary mini" id="f-replace-${id}" style="display:none;" disabled>파일교체(1개)</button>
-          <button class="danger mini"    id="f-del-${id}"     style="display:none;" disabled>선택 삭제</button>
-          <span class="muted" id="f-count-${id}" style="display:none;">0개 선택</span>
-          <button class="ghost mini" id="f-cancel-${id}" style="display:none;">취소</button>
+        <!-- 파일 -->
+        <div style="flex:1; min-width:280px">
+          <h4 style="margin:0 0 6px">📎 파일</h4>
+          <div id="flist-${id}" class="list"></div>
+          <form id="fform-${id}" class="row" style="gap:8px; margin-top:8px; ${canWrite?'':'display:none'}">
+            <input type="file" id="fup-${id}" />
+            <button type="submit">업로드</button>
+          </form>
         </div>
-        <div id="files-${id}" class="list" style="margin-top:8px"></div>
-        <form class="row" id="form-file-${id}" style="margin-top:8px; flex-wrap:wrap; gap:8px;">
-          <input type="file" id="f-${id}"/>
-          <button type="submit">업로드</button>
-        </form>
       </div>
     `;
     $('#list').appendChild(el);
 
-    // ===== 게시글 수정/삭제 (전처럼: 뷰 ↔ 폼 토글 + 저장/취소) =====
-    if(allowManagePost){
-      const btnEdit   = document.getElementById(`btn-edit-${id}`);
-      const btnDel    = document.getElementById(`btn-del-${id}`);
-      const btnSave   = document.getElementById(`btn-save-${id}`);
-      const btnCancel = document.getElementById(`btn-cancel-${id}`);
-      const formE     = document.getElementById(`edit-${id}-form`);
-      const headV     = document.getElementById(`view-${id}-head`);
-      const descV     = document.getElementById(`view-${id}-desc`);
+    // === 게시글 편집/삭제 ===
+    if(allowManage){
+      const pv = el.querySelector(`#pv-${id}`);
+      const pe = el.querySelector(`#pe-${id}`);
+      const btnE = el.querySelector(`#edit-${id}`);
+      const btnD = el.querySelector(`#del-${id}`);
+      const btnS = el.querySelector(`#save-${id}`);
+      const btnC = el.querySelector(`#cancel-${id}`);
 
-      const enterEdit = ()=>{
-        formE.style.display=''; headV.style.display='none'; descV.style.display='none';
-        btnEdit.style.display='none'; btnDel.style.display='none';
-        btnSave.style.display=''; btnCancel.style.display='';
-      };
-      const exitEdit = ()=>{
-        formE.style.display='none'; headV.style.display=''; descV.style.display='';
-        btnEdit.style.display=''; btnDel.style.display='';
-        btnSave.style.display='none'; btnCancel.style.display='none';
-      };
-      const saveEdit = async ()=>{
-        const title = document.getElementById(`e-title-${id}`).value.trim();
-        const desc  = document.getElementById(`e-desc-${id}`).value.trim();
-        const tags  = parseTags(document.getElementById(`e-tags-${id}`).value||'');
-        if(!title||!desc){ alert('제목/설명을 입력하세요.'); return; }
+      const enter = ()=>{ pv.style.display='none'; pe.style.display=''; };
+      const exit  = ()=>{ pe.style.display='none'; pv.style.display=''; };
+
+      btnE.onclick = enter;
+      btnC.onclick = exit;
+      btnS.onclick = async ()=>{
+        const nt = el.querySelector(`#e-title-${id}`).value.trim();
+        const nd = el.querySelector(`#e-desc-${id}`).value.trim();
+        if(!nt||!nd) return alert('제목/설명을 입력하세요.');
         try{
           await db.collection('projects').doc(id).update({
-            title, desc, tags, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            title: nt, desc: nd, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           await loadProjects();
         }catch(e){ alert('수정 실패: '+e.message); }
       };
-
-      btnEdit?.addEventListener('click', enterEdit);
-      btnCancel?.addEventListener('click', exitEdit);
-      btnSave?.addEventListener('click', saveEdit);
-
-      btnDel?.addEventListener('click', async ()=>{
-        if(!confirm('이 글을 삭제할까요? (댓글/파일 기록도 삭제됩니다)')) return;
+      btnD.onclick = async ()=>{
+        if(!confirm('프로젝트를 삭제할까요? (댓글/파일도 함께 삭제됩니다)')) return;
         try{
-          const ref = db.collection('projects').doc(id);
-          // 서브컬렉션 삭제
-          const cs = await ref.collection('comments').get();
-          const fs = await ref.collection('files').get();
-          const batch = db.batch();
-          cs.forEach(x=>batch.delete(x.ref));
-          fs.forEach(x=>batch.delete(x.ref));
-          await batch.commit();
-          // 대표 첨부 삭제 시도
-          if(d.mainFile?.storagePath){
-            try{ await storage.ref().child(d.mainFile.storagePath).delete(); }catch(e){ console.warn('대표첨부 삭제 실패', e); }
+          const pref = db.collection('projects').doc(id);
+          // 댓글 삭제
+          let cs = await pref.collection('comments').limit(500).get();
+          while(!cs.empty){ const b=db.batch(); cs.docs.forEach(d=>b.delete(d.ref)); await b.commit(); cs=await pref.collection('comments').limit(500).get(); }
+          // 파일 삭제(스토리지 시도)
+          let fs = await pref.collection('files').limit(500).get();
+          for(const fdoc of fs.docs){
+            const f = fdoc.data();
+            if(f.storagePath){ try{ await storage.ref().child(f.storagePath).delete(); }catch(err){ console.warn('storage delete fail', err); } }
+            await fdoc.ref.delete();
           }
-          await ref.delete();
-          loadProjects();
+          await pref.delete();
+          await loadProjects();
         }catch(e){ alert('삭제 실패: '+e.message); }
-      });
+      };
+    }
 
-      // 대표 첨부 교체/삭제
-      const mainInp = document.getElementById(`e-mainfile-${id}`);
-      const mainUp  = document.getElementById(`e-mainfile-up-${id}`);
-      const mainDel = document.getElementById(`e-mainfile-del-${id}`);
-
-      mainUp?.addEventListener('click', async ()=>{
-        const f = mainInp?.files?.[0];
-        if(!f){ alert('파일을 선택하세요.'); return; }
-        if(f.size > 10*1024*1024){ alert('10MB 이하만 업로드 가능합니다.'); return; }
+    // === 댓글 섹션 ===
+    loadComments(id);
+    const cform = el.querySelector(`#cform-${id}`);
+    if(cform){
+      cform.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        if(!me) return alert('로그인이 필요합니다.');
+        const ta = el.querySelector(`#cnew-${id}`);
+        const text = (ta.value||'').trim();
+        if(!text) return;
         try{
-          const path = `uploads/${id}/main_${Date.now()}_${f.name}`;
-          const ref  = storage.ref().child(path);
-          await ref.put(f,{customMetadata:{ownerUid: (me?.uid)||''}});
-          const url  = await ref.getDownloadURL();
-          await db.collection('projects').doc(id).update({
-            mainFile:{ name:f.name,size:f.size,contentType:f.type,url,storagePath:path,uploadedAt:firebase.firestore.FieldValue.serverTimestamp(),ownerUid:(me?.uid)||'' },
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          await db.collection('projects').doc(id).collection('comments').add({
+            text,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            authorUid: me.uid,
+            authorName: me.displayName || '익명'
           });
-          // 이전 파일 정리
-          if(d.mainFile?.storagePath){ try{ await storage.ref().child(d.mainFile.storagePath).delete(); }catch(e){} }
-          await loadProjects();
-        }catch(e){ alert('첨부 교체 실패: '+e.message); }
-      });
-
-      mainDel?.addEventListener('click', async ()=>{
-        if(!confirm('대표 첨부를 삭제할까요?')) return;
-        try{
-          if(d.mainFile?.storagePath){ try{ await storage.ref().child(d.mainFile.storagePath).delete(); }catch(e){} }
-          await db.collection('projects').doc(id).update({ mainFile:null, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-          await loadProjects();
-        }catch(e){ alert('첨부 삭제 실패: '+e.message); }
+          ta.value='';
+          loadComments(id);
+        }catch(er){ alert('댓글 등록 실패: '+er.message); }
       });
     }
 
-    // ===== 댓글 & 파일 기능(선택 수정/삭제 / 이름수정·교체·삭제) =====
-    setupCommentToolbar(id);  loadComments(id);
-    setupFileToolbar(id);     loadFiles(id);
-
-    document.getElementById(`form-comment-${id}`).addEventListener('submit', ev=>addComment(ev,id));
-    document.getElementById(`form-file-${id}`).addEventListener('submit',  ev=>uploadFile(ev,id));
-
-    // 뷰 영역 내용(설명/태그/첨부)은 저장 후 전체 리로드(loadProjects)로 동기화
+    // === 파일 섹션 ===
+    loadFiles(id);
+    const fform = el.querySelector(`#fform-${id}`);
+    if(fform){
+      fform.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        if(!me || !canWrite) return alert('권한 없음');
+        const inp = el.querySelector(`#fup-${id}`);
+        const file = inp.files && inp.files[0];
+        if(!file) return alert('파일을 선택하세요.');
+        if(file.size>10*1024*1024) return alert('파일은 최대 10MB');
+        try{
+          const path=`uploads/${id}/${Date.now()}_${file.name}`;
+          const ref=storage.ref().child(path);
+          const snap=await ref.put(file,{customMetadata:{ownerUid:me.uid}});
+          const url=await snap.ref.getDownloadURL();
+          await db.collection('projects').doc(id).collection('files').add({
+            name:file.name,size:file.size,contentType:file.type,url,storagePath:path,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            ownerUid: me.uid, ownerName: me.displayName || '익명'
+          });
+          inp.value='';
+          loadFiles(id);
+        }catch(err){ alert('업로드 실패: '+err.message); }
+      });
+    }
   }
 
-  // ===== 댓글: 선택 편집/삭제 =====
-  function setupCommentToolbar(pid){
-    const enter = $(`#c-enter-${pid}`);
-    const edit  = $(`#c-edit-${pid}`);
-    const del   = $(`#c-del-${pid}`);
-    const cancel= $(`#c-cancel-${pid}`);
-    const count = $(`#c-count-${pid}`);
-    selComments.set(pid, new Set());
-
-    const updateUI = ()=>{
-      const n = selComments.get(pid).size;
-      count.textContent = `${n}개 선택`;
-      edit.disabled = (n!==1);
-      del .disabled = (n===0);
-    };
-
-    enter.addEventListener('click', ()=>{
-      $(`#comments-${pid}`).classList.add('selecting');
-      edit.style.display=''; del.style.display=''; count.style.display=''; cancel.style.display=''; enter.style.display='none';
-      updateUI();
-    });
-    cancel.addEventListener('click', ()=>{
-      selComments.set(pid,new Set());
-      const list = $(`#comments-${pid}`);
-      list.classList.remove('selecting');
-      list.querySelectorAll('.select-cb').forEach(cb=>cb.checked=false);
-      edit.style.display='none'; del.style.display='none'; count.style.display='none'; cancel.style.display='none'; enter.style.display='';
-    });
-
-    edit.addEventListener('click', async ()=>{
-      const set = selComments.get(pid); if(set.size!==1) return;
-      const cid = [...set][0];
-      try{
-        const snap = await db.collection('projects').doc(pid).collection('comments').doc(cid).get();
-        const cur  = (snap.exists && snap.data()?.text) || '';
-        const next = prompt('새 댓글 내용', cur);
-        if(next==null) return;
-        const text = (next||'').trim(); if(!text) return alert('내용을 입력하세요.');
-        await db.collection('projects').doc(pid).collection('comments').doc(cid)
-          .update({ text, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-        loadComments(pid);
-      }catch(e){ alert('댓글 수정 실패: '+e.message); }
-    });
-
-    del.addEventListener('click', async ()=>{
-      const set = selComments.get(pid); if(set.size===0) return;
-      if(!confirm(`${set.size}개 댓글을 삭제할까요?`)) return;
-      try{
-        const batch = db.batch();
-        set.forEach(cid=>{
-          batch.delete(db.collection('projects').doc(pid).collection('comments').doc(cid));
-        });
-        await batch.commit();
-        loadComments(pid);
-      }catch(e){ alert('댓글 삭제 실패: '+e.message); }
-    });
-
-    enter._update = updateUI;
-  }
-
+  // ===== Comments (inline edit like posts) =====
   async function loadComments(pid){
-    const box = $(`#comments-${pid}`);
+    const box = document.getElementById(`clist-${pid}`);
+    if(!box) return;
     box.innerHTML = '<div class="muted">불러오는 중…</div>';
     try{
       const snap = await db.collection('projects').doc(pid).collection('comments')
         .orderBy('createdAt','desc').limit(100).get();
       box.innerHTML = '';
       if(snap.empty){ box.innerHTML = '<div class="muted">아직 댓글이 없습니다.</div>'; return; }
-      const set = selComments.get(pid) || new Set();
+
       snap.forEach(doc=>{
-        const c = doc.data(); const cid = doc.id;
-        const canManage = me && (isAdmin || me.uid===c.authorUid);
-        const row = document.createElement('div');
-        row.className='project';
-        row.innerHTML = `
-          <div class="row" style="justify-content:space-between;align-items:flex-start">
+        const c = doc.data();
+        const cid = doc.id;
+        const can = me && (me.uid===c.authorUid || isAdmin);
+
+        const item = document.createElement('div');
+        item.className = 'comment';
+        item.innerHTML = `
+          <div class="row" style="justify-content:space-between; align-items:flex-start">
             <div style="flex:1">
               <div class="muted" style="font-size:12px">${esc(c.authorName||'익명')} · ${fmt(c.createdAt)}${c.updatedAt?' (수정됨)':''}</div>
-              <div>${esc(c.text)}</div>
+              <div id="cv-${pid}-${cid}" style="white-space:pre-wrap">${esc(c.text)}</div>
+              <form id="ce-${pid}-${cid}" class="list" style="display:none; margin-top:6px">
+                <textarea id="ct-${pid}-${cid}" required>${esc(c.text)}</textarea>
+                <div class="row" style="gap:6px">
+                  <button type="button" class="secondary" id="cs-${pid}-${cid}">저장</button>
+                  <button type="button" class="ghost" id="cc-${pid}-${cid}">취소</button>
+                </div>
+              </form>
             </div>
-            <div>
-              <input type="checkbox" class="select-cb" ${canManage?'':'disabled'} id="c-cb-${pid}-${cid}">
+            <div class="row" style="gap:6px">
+              ${can?`<button class="ghost" id="cebtn-${pid}-${cid}">수정</button><button class="danger" id="cdbtn-${pid}-${cid}">삭제</button>`:''}
             </div>
-          </div>`;
-        box.appendChild(row);
+          </div>
+        `;
+        box.appendChild(item);
 
-        const cb = row.querySelector(`#c-cb-${pid}-${cid}`);
-        if(cb){
-          cb.checked = set.has(cid);
-          cb.addEventListener('change', ()=>{
-            const S = selComments.get(pid);
-            if(cb.checked) S.add(cid); else S.delete(cid);
-            const enterBtn = document.getElementById(`c-enter-${pid}`);
-            if(enterBtn && enterBtn._update) enterBtn._update();
-          });
+        if(can){
+          const v = item.querySelector(`#cv-${pid}-${cid}`);
+          const f = item.querySelector(`#ce-${pid}-${cid}`);
+          const bE = item.querySelector(`#cebtn-${pid}-${cid}`);
+          const bD = item.querySelector(`#cdbtn-${pid}-${cid}`);
+          const bS = item.querySelector(`#cs-${pid}-${cid}`);
+          const bC = item.querySelector(`#cc-${pid}-${cid}`);
+
+          const enter = ()=>{ v.style.display='none'; f.style.display=''; };
+          const exit  = ()=>{ f.style.display='none'; v.style.display=''; };
+
+          bE.onclick = enter;
+          bC.onclick = exit;
+          bS.onclick = async ()=>{
+            const nt = (item.querySelector(`#ct-${pid}-${cid}`).value||'').trim();
+            if(!nt) return alert('내용을 입력하세요.');
+            try{
+              await db.collection('projects').doc(pid).collection('comments').doc(cid).update({
+                text: nt,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              loadComments(pid);
+            }catch(e){ alert('댓글 수정 실패: '+e.message); }
+          };
+          bD.onclick = async ()=>{
+            if(!confirm('댓글을 삭제할까요?')) return;
+            try{
+              await db.collection('projects').doc(pid).collection('comments').doc(cid).delete();
+              loadComments(pid);
+            }catch(e){ alert('댓글 삭제 실패: '+e.message); }
+          };
         }
       });
-      const enterBtn = document.getElementById(`c-enter-${pid}`);
-      if(enterBtn && enterBtn._update) enterBtn._update();
     }catch(e){
-      box.innerHTML = `<div class="muted">댓글 로드 실패: ${esc(e.message)}</div>`;
+      const msg = (e && e.code === 'permission-denied')
+        ? '댓글을 볼 권한이 없습니다. 로그인하거나 페이지 소유자에게 권한을 요청하세요.'
+        : `댓글 로드 실패: ${e.message||e}`;
+      box.innerHTML = `<div class="muted">${esc(msg)}</div>`;
     }
   }
 
-  async function addComment(e, pid){
-    e.preventDefault();
-    if(!me) return alert('로그인이 필요합니다.');
-    const ta = document.getElementById(`c-${pid}`);
-    const text = (ta.value||'').trim(); if(!text) return;
-    try{
-      await db.collection('projects').doc(pid).collection('comments').add({
-        text, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        authorUid: me.uid, authorName: me.displayName||'익명'
-      });
-      ta.value=''; loadComments(pid);
-    }catch(err){ alert('댓글 등록 실패: '+err.message); }
-  }
-
-  // ===== 파일: 선택 이름수정 / 선택 교체 / 선택 삭제 =====
-  function setupFileToolbar(pid){
-    const enter = $(`#f-enter-${pid}`);
-    const rename= $(`#f-rename-${pid}`);
-    const repIn = $(`#f-repl-input-${pid}`);
-    const replace=$(`#f-replace-${pid}`);
-    const del   = $(`#f-del-${pid}`);
-    const cancel= $(`#f-cancel-${pid}`);
-    const count = $(`#f-count-${pid}`);
-    selFiles.set(pid, new Set());
-
-    const updateUI = ()=>{
-      const n = selFiles.get(pid).size;
-      count.textContent = `${n}개 선택`;
-      rename.disabled  = (n!==1);
-      replace.disabled = (n!==1);
-      del.disabled     = (n===0);
-    };
-
-    enter.addEventListener('click', ()=>{
-      $(`#files-${pid}`).classList.add('selecting');
-      rename.style.display=''; replace.style.display=''; del.style.display=''; count.style.display=''; cancel.style.display=''; enter.style.display='none';
-      updateUI();
-    });
-    cancel.addEventListener('click', ()=>{
-      selFiles.set(pid,new Set());
-      const list = $(`#files-${pid}`);
-      list.classList.remove('selecting');
-      list.querySelectorAll('.select-cb').forEach(cb=>cb.checked=false);
-      rename.style.display='none'; replace.style.display='none'; del.style.display='none'; count.style.display='none'; cancel.style.display='none'; enter.style.display='';
-      repIn.value = '';
-    });
-
-    rename.addEventListener('click', async ()=>{
-      const set = selFiles.get(pid); if(set.size!==1) return;
-      const fid = [...set][0];
-      try{
-        const snap = await db.collection('projects').doc(pid).collection('files').doc(fid).get();
-        const cur  = (snap.exists && snap.data()?.name) || '';
-        const next = prompt('새 파일 이름(표시용)', cur);
-        if(next==null) return;
-        await db.collection('projects').doc(pid).collection('files').doc(fid)
-          .update({ name: (next.trim()||cur), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-        loadFiles(pid);
-      }catch(e){ alert('파일 이름 수정 실패: '+e.message); }
-    });
-
-    replace.addEventListener('click', async ()=>{
-      const set = selFiles.get(pid); if(set.size!==1) return;
-      const fid = [...set][0];
-      repIn.click();
-      repIn.onchange = async ()=>{
-        const nf = repIn.files && repIn.files[0];
-        if(!nf) return;
-        if(nf.size > 10*1024*1024) { alert('10MB 이하만 업로드 가능합니다.'); repIn.value=''; return; }
-        try{
-          const doc = await db.collection('projects').doc(pid).collection('files').doc(fid).get();
-          const old = doc.data() || {};
-          const path = `uploads/${pid}/${Date.now()}_${nf.name}`;
-          const ref  = storage.ref().child(path);
-          await ref.put(nf,{customMetadata:{ownerUid: old.ownerUid || (me?.uid||'')}});
-          const url = await ref.getDownloadURL();
-          await db.collection('projects').doc(pid).collection('files').doc(fid).update({
-            name:nf.name, size:nf.size, contentType:nf.type,
-            url, storagePath:path, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-          if(old.storagePath){ try{ await storage.ref().child(old.storagePath).delete(); }catch{} }
-          loadFiles(pid);
-        }catch(e){ alert('파일 교체 실패: '+e.message); }
-        finally{ repIn.value=''; }
-      };
-    });
-
-    del.addEventListener('click', async ()=>{
-      const set = selFiles.get(pid); if(set.size===0) return;
-      if(!confirm(`${set.size}개 파일을 삭제할까요?`)) return;
-      try{
-        for(const fid of set){
-          const doc = await db.collection('projects').doc(pid).collection('files').doc(fid).get();
-          const f = doc.data() || {};
-          if(f.storagePath){ try{ await storage.ref().child(f.storagePath).delete(); }catch{} }
-          await db.collection('projects').doc(pid).collection('files').doc(fid).delete();
-        }
-        loadFiles(pid);
-      }catch(e){ alert('파일 삭제 실패: '+e.message); }
-    });
-
-    enter._update = updateUI;
-  }
-
+  // ===== Files (list · rename · replace · delete) =====
   async function loadFiles(pid){
-    const box = $(`#files-${pid}`);
+    const box = document.getElementById(`flist-${pid}`);
+    if(!box) return;
     box.innerHTML = '<div class="muted">불러오는 중…</div>';
     try{
       const snap = await db.collection('projects').doc(pid).collection('files')
         .orderBy('createdAt','desc').limit(100).get();
-      box.innerHTML='';
+      box.innerHTML = '';
       if(snap.empty){ box.innerHTML = '<div class="muted">업로드된 파일이 없습니다.</div>'; return; }
-      const set = selFiles.get(pid) || new Set();
+
       snap.forEach(doc=>{
-        const f = doc.data(); const fid = doc.id;
-        const can = me && (isAdmin || me.uid===f.ownerUid);
+        const f = doc.data();
+        const fid = doc.id;
+        const can = me && (me.uid===f.ownerUid || isAdmin);
         const isImg = (f.contentType||'').startsWith('image/');
+
         const row = document.createElement('div');
-        row.className='project';
+        row.className = 'file-row';
         row.innerHTML = `
-          <div class="row" style="justify-content:space-between;align-items:center">
-            <div class="row" style="gap:10px;align-items:center;flex:1">
-              ${isImg?`<img class="thumb" src="${esc(f.url)}" alt="${esc(f.name||'image')}">`:''}
-              <div>
-                <div class="muted">${esc(f.name||'파일')} (${f.size||0}B)</div>
-                <a href="${esc(f.url)}" target="_blank" rel="noopener">${isImg?'원본 열기':'다운로드'}</a>
-                ${f.updatedAt?`<span class="chip" style="margin-left:6px;">수정됨</span>`:''}
-              </div>
+          <div class="row" style="gap:10px; align-items:center; flex:1">
+            ${isImg?`<img class="thumb" src="${esc(f.url)}" alt="${esc(f.name||'image')}">`:''}
+            <div style="min-width:0">
+              <div class="muted" style="word-break:break-all">${esc(f.name||'파일')} (${f.size||0}B)</div>
+              <a href="${esc(f.url)}" target="_blank" rel="noopener">${isImg?'원본 열기':'다운로드'}</a>
+              ${f.updatedAt?`<span class="chip" style="margin-left:6px">수정됨</span>`:''}
             </div>
-            <div><input type="checkbox" class="select-cb" ${can?'':'disabled'} id="f-cb-${pid}-${fid}"></div>
-          </div>`;
+          </div>
+          <div class="row" style="gap:6px">
+            ${can?`
+              <button class="ghost" id="frn-${pid}-${fid}">이름수정</button>
+              <button class="ghost" id="fre-${pid}-${fid}">파일교체</button>
+              <button class="danger" id="fdl-${pid}-${fid}">삭제</button>
+            `:''}
+          </div>
+
+          <!-- 이름수정 폼 -->
+          <form id="fedit-${pid}-${fid}" class="row" style="gap:6px; display:none; margin-top:8px; flex:1 0 100%">
+            <input id="fname-${pid}-${fid}" value="${esc(f.name||'')}" placeholder="표시 이름"/>
+            <button type="button" class="secondary" id="fsave-${pid}-${fid}">저장</button>
+            <button type="button" class="ghost" id="fcancel-${pid}-${fid}">취소</button>
+          </form>
+
+          <!-- 파일교체 입력 -->
+          <input type="file" id="fpick-${pid}-${fid}" style="display:none"/>
+        `;
         box.appendChild(row);
 
-        const cb = row.querySelector(`#f-cb-${pid}-${fid}`);
-        if(cb){
-          cb.checked = set.has(fid);
-          cb.addEventListener('change', ()=>{
-            const S = selFiles.get(pid);
-            if(cb.checked) S.add(fid); else S.delete(fid);
-            const enterBtn = document.getElementById(`f-enter-${pid}`);
-            if(enterBtn && enterBtn._update) enterBtn._update();
-          });
+        if(can){
+          // 이름수정 토글
+          const btnRename = row.querySelector(`#frn-${pid}-${fid}`);
+          const btnReplace= row.querySelector(`#fre-${pid}-${fid}`);
+          const btnDelete = row.querySelector(`#fdl-${pid}-${fid}`);
+          const editForm  = row.querySelector(`#fedit-${pid}-${fid}`);
+          const nameInp   = row.querySelector(`#fname-${pid}-${fid}`);
+          const btnSave   = row.querySelector(`#fsave-${pid}-${fid}`);
+          const btnCancel = row.querySelector(`#fcancel-${pid}-${fid}`);
+          const pick      = row.querySelector(`#fpick-${pid}-${fid}`);
+
+          const showEdit = ()=>{ editForm.style.display=''; };
+          const hideEdit = ()=>{ editForm.style.display='none'; };
+
+          btnRename.onclick = showEdit;
+          btnCancel.onclick = hideEdit;
+
+          btnSave.onclick = async ()=>{
+            const newName = (nameInp.value||'').trim();
+            try{
+              await db.collection('projects').doc(pid).collection('files').doc(fid).update({
+                name: newName || f.name || null,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              loadFiles(pid);
+            }catch(e){ alert('파일 이름 수정 실패: '+e.message); }
+          };
+
+          btnReplace.onclick = ()=> pick.click();
+          pick.onchange = async ()=>{
+            const nf = pick.files && pick.files[0];
+            if(!nf) return;
+            if(nf.size>10*1024*1024) return alert('10MB 이하만 업로드');
+            try{
+              const newPath = `uploads/${pid}/${Date.now()}_${nf.name}`;
+              const ref = storage.ref().child(newPath);
+              await ref.put(nf,{customMetadata:{ownerUid: f.ownerUid || (me&&me.uid)||''}});
+              const url = await ref.getDownloadURL();
+              await db.collection('projects').doc(pid).collection('files').doc(fid).update({
+                name:nf.name,size:nf.size,contentType:nf.type,url,storagePath:newPath,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              if(f.storagePath){ try{ await storage.ref().child(f.storagePath).delete(); }catch(err){ console.warn('old delete fail',err); } }
+              loadFiles(pid);
+            }catch(e){ alert('파일 교체 실패: '+e.message); }
+            finally{ pick.value=''; }
+          };
+
+          btnDelete.onclick = async ()=>{
+            if(!confirm('이 파일을 삭제할까요?')) return;
+            try{
+              if(f.storagePath){ try{ await storage.ref().child(f.storagePath).delete(); }catch(err){ console.warn('storage delete fail',err); } }
+              await db.collection('projects').doc(pid).collection('files').doc(fid).delete();
+              loadFiles(pid);
+            }catch(e){ alert('파일 삭제 실패: '+e.message); }
+          };
         }
       });
-      const enterBtn = document.getElementById(`f-enter-${pid}`);
-      if(enterBtn && enterBtn._update) enterBtn._update();
     }catch(e){
-      box.innerHTML = `<div class="muted">파일 로드 실패: ${esc(e.message)}</div>`;
+      const msg = (e && e.code === 'permission-denied')
+        ? '파일을 볼 권한이 없습니다.'
+        : `파일 로드 실패: ${e.message||e}`;
+      box.innerHTML = `<div class="muted">${esc(msg)}</div>`;
     }
   }
 
-  async function uploadFile(e, pid){
-    e.preventDefault();
-    if(!me) return alert('로그인이 필요합니다.');
-    const input = document.getElementById(`f-${pid}`);
-    const file  = input.files && input.files[0];
-    if(!file) return alert('파일을 선택하세요.');
-    if(file.size > 10*1024*1024) return alert('파일은 최대 10MB입니다.');
-
-    try{
-      const path = `uploads/${pid}/${Date.now()}_${file.name}`;
-      const ref  = storage.ref().child(path);
-      const snap = await ref.put(file,{customMetadata:{ownerUid: me.uid, ownerEmail: me.email||''}});
-      const url  = await snap.ref.getDownloadURL();
-      await db.collection('projects').doc(pid).collection('files').add({
-        name:file.name, size:file.size, contentType:file.type, url, storagePath:path,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        ownerUid: me.uid, ownerName: me.displayName||'익명'
-      });
-      input.value=''; loadFiles(pid);
-    }catch(e){ alert('업로드 실패: '+e.message); }
-  }
-
-  // ===== 작성 폼 =====
+  // ===== New project submit =====
   document.getElementById('form-new').addEventListener('submit', async e=>{
     e.preventDefault(); if(!me || !canWrite) return alert('권한 없음');
     const title=$('#p-title').value.trim(), desc=$('#p-desc').value.trim();
@@ -645,21 +520,13 @@
         const path=`uploads/${ref.id}/main_${Date.now()}_${mf.name}`;
         const snap=await storage.ref().child(path).put(mf,{customMetadata:{ownerUid:me.uid}});
         const url=await snap.ref.getDownloadURL();
-        await ref.update({ mainFile:{name:mf.name,size:mf.size,contentType:mf.type,url,storagePath:path,uploadedAt:firebase.firestore.FieldValue.serverTimestamp(),ownerUid:me.uid}});
+        await ref.update({
+          mainFile:{name:mf.name,size:mf.size,contentType:mf.type,url,storagePath:path,uploadedAt:firebase.firestore.FieldValue.serverTimestamp(),ownerUid:me.uid}
+        });
       }
       e.target.reset(); loadProjects();
     }catch(err){ alert('등록 실패: '+err.message); }
   });
 </script>
-
-<!--
-Firestore 규칙(요약)
-- projects/{pid}: create는 authorUid==auth.uid && ownerUid가 본인/친구/관리자 중 하나일 때 허용
-- projects/{pid}/comments: read:true, create: 작성자, update/delete: 작성자 또는 관리자
-- projects/{pid}/files:    read:true, create: 업로더, update/delete: 업로더 또는 관리자
-Storage: /uploads/** write: 로그인 & 10MB 이하 (삭제는 업로더만 등 필요시 추가)
-
-규칙이 맞지 않으면 선택/편집/삭제가 실패할 수 있어요.
--->
 </body>
 </html>
