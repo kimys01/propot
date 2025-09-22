@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>관리자 대시보드</title>
+  <!-- 공통 스타일 -->
+  <link rel="stylesheet" href="base.css">
+  <style>
+    /* 페이지 전용으로 약간만 보강 */
+    .searchbar{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+    .searchbar input{ min-width:260px }
+    .user-card .uid{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .pill{ font-size:12px; padding:2px 8px; border:1px solid #2b3a78; border-radius:999px; color:#bcd0ff }
+    .muted{ color:var(--muted) }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap row" style="gap:10px">
+    <div class="row" style="gap:8px">
+      <strong>🛡️ 관리자 대시보드</strong>
+      <span class="pill">Users · Friends · Projects</span>
+    </div>
+    <div class="row" style="margin-left:auto">
+      <span id="who" class="muted">로그인 필요</span>
+      <button id="btn-login" class="secondary">Google 로그인</button>
+      <button id="btn-logout" class="ghost" style="display:none">로그아웃</button>
+      <a class="secondary" href="index.html">메인</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" style="padding:16px 18px">
+  <section class="card">
+    <h2 style="margin:0 0 8px">사용자 검색</h2>
+    <div class="searchbar">
+      <input id="q" placeholder="이름/이메일/UID 포함 검색" />
+      <button id="btn-refresh" class="secondary">새로고침</button>
+      <span class="muted" id="result-line"></span>
+    </div>
+    <p class="muted" id="guard">※ 관리자만 접근 가능합니다. 관리자 계정으로 로그인해주세요.</p>
+  </section>
+
+  <section class="card" style="margin-top:14px">
+    <div class="row" style="justify-content:space-between; align-items:flex-end">
+      <h2 style="margin:0">사용자 목록</h2>
+      <div class="row" style="gap:8px">
+        <label class="muted">정렬
+          <select id="sort">
+            <option value="updatedAt">최근 업데이트</option>
+            <option value="createdAt">가입일</option>
+            <option value="displayName">이름(가나다)</option>
+            <option value="emailLower">이메일(가나다)</option>
+          </select>
+        </label>
+        <label class="muted">표시 개수
+          <select id="limit">
+            <option>50</option><option selected>100</option><option>200</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div id="list" class="list" style="margin-top:10px"></div>
+  </section>
+</main>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+  // ===== Firebase init =====
+  const firebaseConfig = {
+    apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",
+    authDomain:"propot-cc6bf.firebaseapp.com",
+    projectId:"propot-cc6bf",
+    appId:"1:30940698980:web:1729f30e68d3beb24ac271"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
+
+  // ===== helpers =====
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const fmt = ts => { if(!ts) return ''; const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleString(); };
+  const lower = s => String(s||'').trim().toLowerCase();
+
+  let me=null, isAdmin=false, cacheUsers=[];
+
+  // ===== auth ui =====
+  $('#btn-login').onclick = ()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>alert(e.message));
+  $('#btn-logout').onclick= ()=>auth.signOut();
+
+  auth.onAuthStateChanged(async u=>{
+    me=u;
+    if(!u){
+      $('#who').textContent='로그인 필요';
+      $('#btn-login').style.display=''; $('#btn-logout').style.display='none';
+      $('#guard').textContent='※ 관리자만 접근 가능합니다. 관리자 계정으로 로그인해주세요.';
+      $('#list').innerHTML='';
+      return;
+    }
+    $('#who').textContent = `${u.displayName||'익명'} (${u.email||''})`;
+    $('#btn-login').style.display='none'; $('#btn-logout').style.display='';
+    try{
+      isAdmin = (await db.collection('roles').doc(u.uid).get()).exists;
+    }catch{ isAdmin=false; }
+    if(!isAdmin){
+      $('#guard').innerHTML = '⛔ 권한이 없습니다. <a href="index.html">메인으로 돌아가기</a>';
+      $('#list').innerHTML='';
+      return;
+    }
+    $('#guard').textContent = '관리자 모드입니다. 모든 사용자 목록을 볼 수 있어요.';
+    await loadUsers();
+  });
+
+  // ===== load & render users =====
+  $('#btn-refresh').onclick = ()=>loadUsers();
+  $('#q').addEventListener('input', ()=>applyFilter());
+  $('#sort').addEventListener('change', ()=>loadUsers());
+  $('#limit').addEventListener('change', ()=>loadUsers());
+
+  async function loadUsers(){
+    if(!isAdmin) return;
+    const sort = $('#sort').value;
+    const lim  = parseInt($('#limit').value,10)||100;
+    $('#result-line').textContent = '불러오는 중…';
+    $('#list').innerHTML = '<div class="muted">불러오는 중…</div>';
+    try{
+      // 너무 많은 인덱스를 요구하지 않도록 updatedAt, createdAt은 서버 정렬, 나머지는 클라 정렬 fallback
+      let snap;
+      if(sort==='updatedAt' || sort==='createdAt'){
+        snap = await db.collection('users').orderBy(sort,'desc').limit(lim).get();
+      }else{
+        // displayName / emailLower 정렬 요청 → 우선 updatedAt으로 가져온 뒤 JS에서 정렬
+        snap = await db.collection('users').orderBy('updatedAt','desc').limit(lim).get();
+      }
+      cacheUsers = snap.docs.map(d=>({ id:d.id, data:d.data() }));
+      if(sort==='displayName') cacheUsers.sort((a,b)=> (a.data.displayName||'').localeCompare(b.data.displayName||'','ko'));
+      if(sort==='emailLower') cacheUsers.sort((a,b)=> (a.data.emailLower||'').localeCompare(b.data.emailLower||''));
+      renderUsers(cacheUsers);
+      $('#result-line').textContent = `${cacheUsers.length}명 로드됨`;
+      applyFilter(); // 검색어 있으면 필터
+    }catch(e){
+      $('#list').innerHTML = `<div class="muted">불러오기 실패: ${esc(e.message)}</div>`;
+      $('#result-line').textContent = '오류';
+    }
+  }
+
+  function applyFilter(){
+    const q = lower($('#q').value);
+    if(!q){ renderUsers(cacheUsers); return; }
+    const filtered = cacheUsers.filter(({data})=>{
+      const hay = `${data.uid||''} ${data.displayName||''} ${data.email||''}`.toLowerCase();
+      return hay.includes(q);
+    });
+    renderUsers(filtered);
+    $('#result-line').textContent = `${filtered.length}명 (검색)`;
+  }
+
+  function renderUsers(list){
+    const box = $('#list');
+    box.innerHTML='';
+    if(!list || !list.length){
+      box.innerHTML = '<div class="muted">표시할 사용자가 없습니다.</div>';
+      return;
+    }
+    list.forEach(({id, data})=>{
+      const el = document.createElement('article');
+      el.className = 'project user-card'; // base.css의 카드 스타일 재사용
+      el.innerHTML = `
+        <div class="row" style="justify-content:space-between; align-items:flex-start">
+          <div>
+            <div class="row" style="gap:8px; align-items:center">
+              <h3 style="margin:0">${esc(data.displayName || '이름 없음')}</h3>
+              ${data.email ? `<span class="pill">${esc(data.email)}</span>` : ''}
+              ${id ? `<span class="pill uid">${esc(id)}</span>` : ''}
+            </div>
+            <div class="muted" style="margin-top:4px">가입: ${fmt(data.createdAt)} · 수정: ${fmt(data.updatedAt)}</div>
+          </div>
+          <div class="row" style="gap:6px">
+            <a class="secondary" href="u.html?uid=${encodeURIComponent(id)}" target="_blank" rel="noopener">페이지 열기</a>
+            <button class="ghost" data-copy="${id}">링크 복사</button>
+            <button class="ghost" data-fold="${id}">자세히</button>
+          </div>
+        </div>
+        <div id="more-${id}" style="display:none; margin-top:8px">
+          <div class="muted">최근 프로젝트 5개 / 친구 현황</div>
+          <div class="list" id="p-${id}" style="margin-top:8px"></div>
+          <div class="list" id="f-${id}" style="margin-top:8px"></div>
+        </div>
+      `;
+      box.appendChild(el);
+
+      // 링크 복사
+      el.querySelector('button[data-copy]').onclick = async (ev)=>{
+        const uid = ev.target.getAttribute('data-copy');
+        const link = `${location.origin}${location.pathname.replace(/admin\.html?$/,'')}u.html?uid=${encodeURIComponent(uid)}`;
+        await navigator.clipboard.writeText(link);
+        ev.target.textContent = '복사됨!';
+        setTimeout(()=>ev.target.textContent='링크 복사', 1200);
+      };
+
+      // 자세히(최근 프로젝트/친구)
+      el.querySelector('button[data-fold]').onclick = async (ev)=>{
+        const uid = ev.target.getAttribute('data-fold');
+        const wrap = document.getElementById(`more-${uid}`);
+        const open = wrap.style.display === 'none';
+        wrap.style.display = open ? '' : 'none';
+        if(open && !wrap._loaded){
+          wrap._loaded = true;
+          loadMini(uid);
+        }
+      };
+    });
+  }
+
+  // 선택 사용자 미니 패널(최근 프로젝트/친구)
+  async function loadMini(uid){
+    // 최근 프로젝트 5개
+    try{
+      const ps = await db.collection('projects')
+        .where('ownerUid','==',uid)
+        .orderBy('createdAt','desc').limit(5).get();
+      const pBox = document.getElementById(`p-${uid}`);
+      if(ps.empty){ pBox.innerHTML = '<div class="muted">프로젝트 없음</div>'; }
+      else{
+        pBox.innerHTML='';
+        ps.forEach(d=>{
+          const x = d.data();
+          const row = document.createElement('div');
+          row.className='project';
+          row.innerHTML = `
+            <div class="row" style="justify-content:space-between">
+              <div>
+                <div><strong>${esc(x.title||'(제목없음)')}</strong></div>
+                <div class="muted" style="font-size:12px">${esc(x.authorName||'익명')} · ${fmt(x.createdAt)}</div>
+              </div>
+              <a class="ghost" href="u.html?uid=${encodeURIComponent(uid)}" target="_blank" rel="noopener">페이지로</a>
+            </div>`;
+          pBox.appendChild(row);
+        });
+      }
+    }catch(e){
+      document.getElementById(`p-${uid}`).innerHTML = `<div class="muted">프로젝트 로드 실패: ${esc(e.message)}</div>`;
+    }
+
+    // 친구(내 페이지에 글쓰기 권한 부여된 사용자) 5명
+    try{
+      const fs = await db.collection('friends')
+        .where('ownerUid','==',uid)
+        .orderBy('createdAt','desc').limit(5).get();
+      const fBox = document.getElementById(`f-${uid}`);
+      if(fs.empty){ fBox.innerHTML = '<div class="muted">공유된 친구 없음</div>'; }
+      else{
+        fBox.innerHTML='';
+        fs.forEach(d=>{
+          const f=d.data();
+          const row=document.createElement('div');
+          row.className='project';
+          row.innerHTML = `
+            <div class="row" style="justify-content:space-between">
+              <div>
+                <div><strong>${esc(f.friendName||f.friendUid||'친구')}</strong></div>
+                <div class="muted" style="font-size:12px">${esc(f.friendUid)}</div>
+              </div>
+              <a class="ghost" href="u.html?uid=${encodeURIComponent(uid)}" target="_blank" rel="noopener">페이지로</a>
+            </div>`;
+          fBox.appendChild(row);
+        });
+      }
+    }catch(e){
+      document.getElementById(`f-${uid}`).innerHTML = `<div class="muted">친구 로드 실패: ${esc(e.message)}</div>`;
+    }
+  }
+</script>
+</body>
+</html>
