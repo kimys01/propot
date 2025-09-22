@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://kimys01.github.io/propot/sitemap.xml
