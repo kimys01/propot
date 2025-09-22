@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>내 포트폴리오</title>
+<!-- u.html -->
+<link rel="stylesheet" href="./assets/css/base.css">
+<link rel="stylesheet" href="./assets/css/u.css">
+
+</head>
+<body>
+<header>
+  <div class="wrap row">
+    <div class="row"><strong>📄 포트폴리오</strong><span id="owner-chip" class="chip"></span></div>
+    <div class="row" style="margin-left:auto">
+      <span id="user-line" class="muted">로그인 필요</span>
+      <button id="btn-login" class="secondary">Google 로그인</button>
+      <button id="btn-logout" class="secondary" style="display:none">로그아웃</button>
+      <a id="btn-home" class="secondary" href="index.html">메인</a>
+      <button id="btn-copy" class="secondary">공유 링크</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" style="padding:16px 18px">
+  <section class="card">
+    <h2 style="margin:0 0 8px">프로젝트 작성</h2>
+    <p id="write-hint" class="muted">이 페이지의 소유자/관리자/초대된 친구만 작성할 수 있어요.</p>
+    <form id="form-new" class="list" style="display:none">
+      <input id="p-title" placeholder="제목" required/>
+      <textarea id="p-desc" placeholder="설명" required></textarea>
+      <div class="row" style="gap:8px">
+        <input id="p-tags" placeholder="태그(쉼표 구분) 예: ar, esp32" style="flex:1"/>
+        <input id="p-mainfile" type="file" style="flex:1"/>
+      </div>
+      <div class="row"><button type="submit">등록</button></div>
+    </form>
+  </section>
+
+  <section class="card" style="margin-top:14px">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">프로젝트 목록</h2>
+      <button id="btn-refresh" class="secondary">새로고침</button>
+    </div>
+    <div id="list" class="list" style="margin-top:10px"></div>
+  </section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script>
+  // ===== Firebase =====
+  const cfg = {
+    apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",
+    authDomain:"propot-cc6bf.firebaseapp.com",
+    projectId:"propot-cc6bf",
+    storageBucket:"propot-cc6bf.firebasestorage.app",
+    appId:"1:30940698980:web:1729f30e68d3beb24ac271"
+  };
+  firebase.initializeApp(cfg);
+  const auth=firebase.auth(), db=firebase.firestore(), storage=firebase.storage();
+
+  // ===== Helpers =====
+  const $ = s=>document.querySelector(s);
+  const esc = s=>String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  const parseTags = v=>String(v||'').split(/[, \t]+/).map(x=>x.trim().replace(/^#/,'').toLowerCase()).filter(Boolean).slice(0,10);
+  const fmt = ts => { if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleString(); };
+
+  // ===== Owner (page) =====
+  const params = new URLSearchParams(location.search);
+  const ownerUid = params.get('uid');
+  if(!ownerUid){ alert('잘못된 접근: uid가 없습니다.'); location.href='index.html'; }
+  $('#owner-chip').textContent = `owner: ${ownerUid.slice(0,8)}…`;
+  const shareUrl = `${location.origin}${location.pathname}?uid=${encodeURIComponent(ownerUid)}`;
+  $('#btn-copy').onclick = async ()=>{ await navigator.clipboard.writeText(shareUrl); alert('공유 링크 복사됨'); };
+
+  // ===== Session =====
+  let me=null, isAdmin=false, canWrite=false;
+
+  $('#btn-login').onclick = ()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>alert(e.message));
+  $('#btn-logout').onclick= ()=>auth.signOut();
+  $('#btn-refresh').onclick= ()=>loadProjects();
+
+  async function computePermission(){
+    if(!me){ canWrite=false; $('#form-new').style.display='none'; return; }
+    const isOwner = me.uid===ownerUid;
+    let isFriend = false;
+    if(!isOwner && !isAdmin){
+      try{
+        const q = await db.collection('friends')
+          .where('ownerUid','==',ownerUid)
+          .where('friendUid','==',me.uid)
+          .limit(1).get();
+        isFriend = !q.empty;
+      }catch(e){ console.warn('friend check error', e); }
+    }
+    canWrite = isOwner || isFriend || isAdmin;
+    $('#write-hint').textContent = canWrite ? '작성 가능 사용자입니다.' : '작성 권한이 없습니다.';
+    $('#form-new').style.display = canWrite ? '' : 'none';
+  }
+
+  auth.onAuthStateChanged(async u=>{
+    me=u;
+    if(u){
+      $('#user-line').textContent = `${u.displayName||'익명'} (${u.email||''})`;
+      $('#btn-login').style.display='none'; $('#btn-logout').style.display='';
+      try{ isAdmin=(await db.collection('roles').doc(u.uid).get()).exists; }catch{ isAdmin=false; }
+    }else{
+      $('#user-line').textContent='로그인 필요';
+      $('#btn-login').style.display=''; $('#btn-logout').style.display='none';
+      isAdmin=false;
+    }
+    await computePermission();
+    await loadProjects();
+  });
+
+  // ===== Projects =====
+  async function loadProjects(){
+    const box = $('#list'); box.innerHTML='<div class="muted">불러오는 중…</div>';
+    try{
+      const snap = await db.collection('projects')
+        .where('ownerUid','==',ownerUid)
+        .orderBy('createdAt','desc').limit(100).get();
+      box.innerHTML='';
+      if(snap.empty){ box.innerHTML='<div class="muted">아직 글이 없습니다.</div>'; return; }
+      snap.forEach(doc=>renderProject(doc.id, doc.data()));
+    }catch(e){
+      const hint = e.message && e.message.includes('The query requires an index')
+        ? '<br/><span class="muted">⚠️ 인덱스 필요: 콘솔 링크로 생성 후 다시 시도하세요.</span>'
+        : '';
+      box.innerHTML=`<div class="muted">불러오기 실패: ${esc(e.message)}${hint}</div>`;
+    }
+  }
+
+  function renderProject(id, d){
+    const mine = me && (me.uid===d.authorUid);
+    const allowManage = me && (mine || isAdmin);
+
+    const el = document.createElement('article');
+    el.className='project';
+    el.innerHTML = `
+      <div class="row" style="justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div id="pv-${id}">
+            <h3 style="margin:0">${esc(d.title)}</h3>
+            <div class="muted" style="margin:2px 0 8px">${esc(d.authorName||'익명')} · ${fmt(d.createdAt)}</div>
+            <p style="margin:0">${esc(d.desc)}</p>
+            ${(d.tags&&d.tags.length)?`<div class="row" style="gap:6px;margin-top:6px">${d.tags.map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}</div>`:''}
+            ${d.mainFile?.url?`<div style="margin-top:6px"><a class="chip" href="${d.mainFile.url}" target="_blank" rel="noopener">첨부 보기</a></div>`:''}
+          </div>
+
+          <form id="pe-${id}" class="list" style="display:none; margin-top:6px">
+            <input id="e-title-${id}" value="${esc(d.title)}" required/>
+            <textarea id="e-desc-${id}" required>${esc(d.desc)}</textarea>
+            <div class="row" style="gap:6px">
+              <button type="button" class="secondary" id="save-${id}">저장</button>
+              <button type="button" class="ghost" id="cancel-${id}">취소</button>
+            </div>
+          </form>
+        </div>
+        <div class="row" style="gap:6px">
+          ${allowManage?`
+            <button class="secondary" id="edit-${id}">수정</button>
+            <button class="danger" id="del-${id}">삭제</button>
+          `:''}
+        </div>
+      </div>
+
+      <div class="row" style="gap:16px; margin-top:14px; align-items:flex-start; flex-wrap:wrap">
+        <!-- 댓글 -->
+        <div style="flex:1; min-width:280px">
+          <h4 style="margin:0 0 6px">💬 댓글</h4>
+          <div id="clist-${id}" class="list"></div>
+          <form id="cform-${id}" class="list" style="margin-top:8px; ${canWrite?'':'display:none'}">
+            <textarea id="cnew-${id}" placeholder="의견을 남겨주세요" required></textarea>
+            <div class="row"><button type="submit" class="secondary">댓글 등록</button></div>
+          </form>
+        </div>
+
+        <!-- 파일 -->
+        <div style="flex:1; min-width:280px">
+          <h4 style="margin:0 0 6px">📎 파일</h4>
+          <div id="flist-${id}" class="list"></div>
+          <form id="fform-${id}" class="row" style="gap:8px; margin-top:8px; ${canWrite?'':'display:none'}">
+            <input type="file" id="fup-${id}" />
+            <button type="submit">업로드</button>
+          </form>
+        </div>
+      </div>
+    `;
+    $('#list').appendChild(el);
+
+    // === 게시글 편집/삭제 ===
+    if(allowManage){
+      const pv = el.querySelector(`#pv-${id}`);
+      const pe = el.querySelector(`#pe-${id}`);
+      const btnE = el.querySelector(`#edit-${id}`);
+      const btnD = el.querySelector(`#del-${id}`);
+      const btnS = el.querySelector(`#save-${id}`);
+      const btnC = el.querySelector(`#cancel-${id}`);
+
+      const enter = ()=>{ pv.style.display='none'; pe.style.display=''; };
+      const exit  = ()=>{ pe.style.display='none'; pv.style.display=''; };
+
+      btnE.onclick = enter;
+      btnC.onclick = exit;
+      btnS.onclick = async ()=>{
+        const nt = el.querySelector(`#e-title-${id}`).value.trim();
+        const nd = el.querySelector(`#e-desc-${id}`).value.trim();
+        if(!nt||!nd) return alert('제목/설명을 입력하세요.');
+        try{
+          await db.collection('projects').doc(id).update({
+            title: nt, desc: nd, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          await loadProjects();
+        }catch(e){ alert('수정 실패: '+e.message); }
+      };
+      btnD.onclick = async ()=>{
+        if(!confirm('프로젝트를 삭제할까요? (댓글/파일도 함께 삭제됩니다)')) return;
+        try{
+          const pref = db.collection('projects').doc(id);
+          // 댓글 삭제
+          let cs = await pref.collection('comments').limit(500).get();
+          while(!cs.empty){ const b=db.batch(); cs.docs.forEach(d=>b.delete(d.ref)); await b.commit(); cs=await pref.collection('comments').limit(500).get(); }
+          // 파일 삭제(스토리지 시도)
+          let fs = await pref.collection('files').limit(500).get();
+          for(const fdoc of fs.docs){
+            const f = fdoc.data();
+            if(f.storagePath){ try{ await storage.ref().child(f.storagePath).delete(); }catch(err){ console.warn('storage delete fail', err); } }
+            await fdoc.ref.delete();
+          }
+          await pref.delete();
+          await loadProjects();
+        }catch(e){ alert('삭제 실패: '+e.message); }
+      };
+    }
+
+    // === 댓글 섹션 ===
+    loadComments(id);
+    const cform = el.querySelector(`#cform-${id}`);
+    if(cform){
+      cform.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        if(!me) return alert('로그인이 필요합니다.');
+        const ta = el.querySelector(`#cnew-${id}`);
+        const text = (ta.value||'').trim();
+        if(!text) return;
+        try{
+          await db.collection('projects').doc(id).collection('comments').add({
+            text,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            authorUid: me.uid,
+            authorName: me.displayName || '익명'
+          });
+          ta.value='';
+          loadComments(id);
+        }catch(er){ alert('댓글 등록 실패: '+er.message); }
+      });
+    }
+
+    // === 파일 섹션 ===
+    loadFiles(id);
+    const fform = el.querySelector(`#fform-${id}`);
+    if(fform){
+      fform.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        if(!me || !canWrite) return alert('권한 없음');
+        const inp = el.querySelector(`#fup-${id}`);
+        const file = inp.files && inp.files[0];
+        if(!file) return alert('파일을 선택하세요.');
+        if(file.size>10*1024*1024) return alert('파일은 최대 10MB');
+        try{
+          const path=`uploads/${id}/${Date.now()}_${file.name}`;
+          const ref=storage.ref().child(path);
+          const snap=await ref.put(file,{customMetadata:{ownerUid:me.uid}});
+          const url=await snap.ref.getDownloadURL();
+          await db.collection('projects').doc(id).collection('files').add({
+            name:file.name,size:file.size,contentType:file.type,url,storagePath:path,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            ownerUid: me.uid, ownerName: me.displayName || '익명'
+          });
+          inp.value='';
+          loadFiles(id);
+        }catch(err){ alert('업로드 실패: '+err.message); }
+      });
+    }
+  }
+
+  // ===== Comments (inline edit like posts) =====
+  async function loadComments(pid){
+    const box = document.getElementById(`clist-${pid}`);
+    if(!box) return;
+    box.innerHTML = '<div class="muted">불러오는 중…</div>';
+    try{
+      const snap = await db.collection('projects').doc(pid).collection('comments')
+        .orderBy('createdAt','desc').limit(100).get();
+      box.innerHTML = '';
+      if(snap.empty){ box.innerHTML = '<div class="muted">아직 댓글이 없습니다.</div>'; return; }
+
+      snap.forEach(doc=>{
+        const c = doc.data();
+        const cid = doc.id;
+        const can = me && (me.uid===c.authorUid || isAdmin);
+
+        const item = document.createElement('div');
+        item.className = 'comment';
+        item.innerHTML = `
+          <div class="row" style="justify-content:space-between; align-items:flex-start">
+            <div style="flex:1">
+              <div class="muted" style="font-size:12px">${esc(c.authorName||'익명')} · ${fmt(c.createdAt)}${c.updatedAt?' (수정됨)':''}</div>
+              <div id="cv-${pid}-${cid}" style="white-space:pre-wrap">${esc(c.text)}</div>
+              <form id="ce-${pid}-${cid}" class="list" style="display:none; margin-top:6px">
+                <textarea id="ct-${pid}-${cid}" required>${esc(c.text)}</textarea>
+                <div class="row" style="gap:6px">
+                  <button type="button" class="secondary" id="cs-${pid}-${cid}">저장</button>
+                  <button type="button" class="ghost" id="cc-${pid}-${cid}">취소</button>
+                </div>
+              </form>
+            </div>
+            <div class="row" style="gap:6px">
+              ${can?`<button class="ghost" id="cebtn-${pid}-${cid}">수정</button><button class="danger" id="cdbtn-${pid}-${cid}">삭제</button>`:''}
+            </div>
+          </div>
+        `;
+        box.appendChild(item);
+
+        if(can){
+          const v = item.querySelector(`#cv-${pid}-${cid}`);
+          const f = item.querySelector(`#ce-${pid}-${cid}`);
+          const bE = item.querySelector(`#cebtn-${pid}-${cid}`);
+          const bD = item.querySelector(`#cdbtn-${pid}-${cid}`);
+          const bS = item.querySelector(`#cs-${pid}-${cid}`);
+          const bC = item.querySelector(`#cc-${pid}-${cid}`);
+
+          const enter = ()=>{ v.style.display='none'; f.style.display=''; };
+          const exit  = ()=>{ f.style.display='none'; v.style.display=''; };
+
+          bE.onclick = enter;
+          bC.onclick = exit;
+          bS.onclick = async ()=>{
+            const nt = (item.querySelector(`#ct-${pid}-${cid}`).value||'').trim();
+            if(!nt) return alert('내용을 입력하세요.');
+            try{
+              await db.collection('projects').doc(pid).collection('comments').doc(cid).update({
+                text: nt,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              loadComments(pid);
+            }catch(e){ alert('댓글 수정 실패: '+e.message); }
+          };
+          bD.onclick = async ()=>{
+            if(!confirm('댓글을 삭제할까요?')) return;
+            try{
+              await db.collection('projects').doc(pid).collection('comments').doc(cid).delete();
+              loadComments(pid);
+            }catch(e){ alert('댓글 삭제 실패: '+e.message); }
+          };
+        }
+      });
+    }catch(e){
+      const msg = (e && e.code === 'permission-denied')
+        ? '댓글을 볼 권한이 없습니다. 로그인하거나 페이지 소유자에게 권한을 요청하세요.'
+        : `댓글 로드 실패: ${e.message||e}`;
+      box.innerHTML = `<div class="muted">${esc(msg)}</div>`;
+    }
+  }
+
+  // ===== Files (list · rename · replace · delete) =====
+  async function loadFiles(pid){
+    const box = document.getElementById(`flist-${pid}`);
+    if(!box) return;
+    box.innerHTML = '<div class="muted">불러오는 중…</div>';
+    try{
+      const snap = await db.collection('projects').doc(pid).collection('files')
+        .orderBy('createdAt','desc').limit(100).get();
+      box.innerHTML = '';
+      if(snap.empty){ box.innerHTML = '<div class="muted">업로드된 파일이 없습니다.</div>'; return; }
+
+      snap.forEach(doc=>{
+        const f = doc.data();
+        const fid = doc.id;
+        const can = me && (me.uid===f.ownerUid || isAdmin);
+        const isImg = (f.contentType||'').startsWith('image/');
+
+        const row = document.createElement('div');
+        row.className = 'file-row';
+        row.innerHTML = `
+          <div class="row" style="gap:10px; align-items:center; flex:1">
+            ${isImg?`<img class="thumb" src="${esc(f.url)}" alt="${esc(f.name||'image')}">`:''}
+            <div style="min-width:0">
+              <div class="muted" style="word-break:break-all">${esc(f.name||'파일')} (${f.size||0}B)</div>
+              <a href="${esc(f.url)}" target="_blank" rel="noopener">${isImg?'원본 열기':'다운로드'}</a>
+              ${f.updatedAt?`<span class="chip" style="margin-left:6px">수정됨</span>`:''}
+            </div>
+          </div>
+          <div class="row" style="gap:6px">
+            ${can?`
+              <button class="ghost" id="frn-${pid}-${fid}">이름수정</button>
+              <button class="ghost" id="fre-${pid}-${fid}">파일교체</button>
+              <button class="danger" id="fdl-${pid}-${fid}">삭제</button>
+            `:''}
+          </div>
+
+          <!-- 이름수정 폼 -->
+          <form id="fedit-${pid}-${fid}" class="row" style="gap:6px; display:none; margin-top:8px; flex:1 0 100%">
+            <input id="fname-${pid}-${fid}" value="${esc(f.name||'')}" placeholder="표시 이름"/>
+            <button type="button" class="secondary" id="fsave-${pid}-${fid}">저장</button>
+            <button type="button" class="ghost" id="fcancel-${pid}-${fid}">취소</button>
+          </form>
+
+          <!-- 파일교체 입력 -->
+          <input type="file" id="fpick-${pid}-${fid}" style="display:none"/>
+        `;
+        box.appendChild(row);
+
+        if(can){
+          // 이름수정 토글
+          const btnRename = row.querySelector(`#frn-${pid}-${fid}`);
+          const btnReplace= row.querySelector(`#fre-${pid}-${fid}`);
+          const btnDelete = row.querySelector(`#fdl-${pid}-${fid}`);
+          const editForm  = row.querySelector(`#fedit-${pid}-${fid}`);
+          const nameInp   = row.querySelector(`#fname-${pid}-${fid}`);
+          const btnSave   = row.querySelector(`#fsave-${pid}-${fid}`);
+          const btnCancel = row.querySelector(`#fcancel-${pid}-${fid}`);
+          const pick      = row.querySelector(`#fpick-${pid}-${fid}`);
+
+          const showEdit = ()=>{ editForm.style.display=''; };
+          const hideEdit = ()=>{ editForm.style.display='none'; };
+
+          btnRename.onclick = showEdit;
+          btnCancel.onclick = hideEdit;
+
+          btnSave.onclick = async ()=>{
+            const newName = (nameInp.value||'').trim();
+            try{
+              await db.collection('projects').doc(pid).collection('files').doc(fid).update({
+                name: newName || f.name || null,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              loadFiles(pid);
+            }catch(e){ alert('파일 이름 수정 실패: '+e.message); }
+          };
+
+          btnReplace.onclick = ()=> pick.click();
+          pick.onchange = async ()=>{
+            const nf = pick.files && pick.files[0];
+            if(!nf) return;
+            if(nf.size>10*1024*1024) return alert('10MB 이하만 업로드');
+            try{
+              const newPath = `uploads/${pid}/${Date.now()}_${nf.name}`;
+              const ref = storage.ref().child(newPath);
+              await ref.put(nf,{customMetadata:{ownerUid: f.ownerUid || (me&&me.uid)||''}});
+              const url = await ref.getDownloadURL();
+              await db.collection('projects').doc(pid).collection('files').doc(fid).update({
+                name:nf.name,size:nf.size,contentType:nf.type,url,storagePath:newPath,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              if(f.storagePath){ try{ await storage.ref().child(f.storagePath).delete(); }catch(err){ console.warn('old delete fail',err); } }
+              loadFiles(pid);
+            }catch(e){ alert('파일 교체 실패: '+e.message); }
+            finally{ pick.value=''; }
+          };
+
+          btnDelete.onclick = async ()=>{
+            if(!confirm('이 파일을 삭제할까요?')) return;
+            try{
+              if(f.storagePath){ try{ await storage.ref().child(f.storagePath).delete(); }catch(err){ console.warn('storage delete fail',err); } }
+              await db.collection('projects').doc(pid).collection('files').doc(fid).delete();
+              loadFiles(pid);
+            }catch(e){ alert('파일 삭제 실패: '+e.message); }
+          };
+        }
+      });
+    }catch(e){
+      const msg = (e && e.code === 'permission-denied')
+        ? '파일을 볼 권한이 없습니다.'
+        : `파일 로드 실패: ${e.message||e}`;
+      box.innerHTML = `<div class="muted">${esc(msg)}</div>`;
+    }
+  }
+
+  // ===== New project submit =====
+  document.getElementById('form-new').addEventListener('submit', async e=>{
+    e.preventDefault(); if(!me || !canWrite) return alert('권한 없음');
+    const title=$('#p-title').value.trim(), desc=$('#p-desc').value.trim();
+    const tags=parseTags($('#p-tags').value); const mf=$('#p-mainfile').files[0];
+    if(!title || !desc) return alert('제목/설명은 필수');
+    try{
+      const ref = await db.collection('projects').add({
+        ownerUid, title, desc, tags,
+        authorUid: me.uid, authorName: me.displayName||'익명', authorEmail: me.email||null,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        mainFile: null
+      });
+      if(mf){
+        if(mf.size>10*1024*1024) throw new Error('파일은 최대 10MB');
+        const path=`uploads/${ref.id}/main_${Date.now()}_${mf.name}`;
+        const snap=await storage.ref().child(path).put(mf,{customMetadata:{ownerUid:me.uid}});
+        const url=await snap.ref.getDownloadURL();
+        await ref.update({
+          mainFile:{name:mf.name,size:mf.size,contentType:mf.type,url,storagePath:path,uploadedAt:firebase.firestore.FieldValue.serverTimestamp(),ownerUid:me.uid}
+        });
+      }
+      e.target.reset(); loadProjects();
+    }catch(err){ alert('등록 실패: '+err.message); }
+  });
+</script>
+</body>
+</html>

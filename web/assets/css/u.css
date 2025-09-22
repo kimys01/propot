@@ -1,0 +1,11 @@
+/* u.html 전용 */
+.project{
+  background:#0f1731; border:1px solid #23305d;
+  border-radius:12px; padding:12px;
+}
+
+/* (선택) 첨부 썸네일 같은 확장 스타일이 필요하면 여기에 */
+.thumb{
+  width:160px; height:100px; object-fit:cover;
+  border-radius:10px; border:1px solid #23305d;
+}
