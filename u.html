@@ -1,60 +1,88 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>내 포트폴리오</title>
-
-  <link rel="canonical" href="https://kimys01.github.io/propot/u.html">
-  <meta name="theme-color" content="#0b1020">
-  <link rel="icon" href="web/favicon.svg">
-
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="내 포트폴리오">
-  <meta property="og:description" content="내가 쓴 프로젝트와 첨부/댓글">
-  <meta property="og:image" content="https://kimys01.github.io/propot/web/og-card.png">
-
-  <base href="https://kimys01.github.io/propot/">
-  <link rel="stylesheet" href="/propot/base.css?v=20250922">
-  <link rel="stylesheet" href="/propot/u.css?v=20250922">
-
-
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<base href="https://kimys01.github.io/propot/">
+<title>내 포트폴리오</title>
+<style>
+  :root{--bg:#0b1020;--card:#121a33;--muted:#8aa0c7;--text:#e9f0ff;--accent:#6da7ff;--accent2:#8cffda;--danger:#ff6c6c;--bd:#1d274b}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Noto Sans KR,Malgun Gothic,sans-serif}
+  a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+  .hdr{position:sticky;top:0;background:#0b1020cc;border-bottom:1px solid #1e2a55;backdrop-filter:blur(8px);z-index:10}
+  .wrap{max-width:1024px;margin:0 auto;padding:14px 18px}
+  .row{display:flex;gap:10px;align-items:center}
+  .row.space{justify-content:space-between}
+  .row.gap8{gap:8px}
+  .row.wrap{flex-wrap:wrap}
+  .pad16{padding:16px 18px}
+  .mt10{margin-top:10px}.mt14{margin-top:14px}.mt8{margin-top:8px}.mt2{margin-top:2px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px}
+  .list{display:grid;gap:12px}
+  .project{background:#0f1731;border:1px solid #23305d;border-radius:12px;padding:12px}
+  .chip{font-size:12px;padding:2px 8px;border:1px solid #2b3a78;border-radius:999px;color:#bcd0ff}
+  .muted{color:var(--muted)} .ttl{margin:0 0 8px}
+  button,input,textarea{font:inherit}
+  textarea{min-height:80px;resize:vertical}
+  button{background:linear-gradient(135deg,var(--accent),#4f7fe0);color:#081225;border:0;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700}
+  button.secondary{background:#1b2750;color:#e9f0ff;border:1px solid #2b3a78}
+  button.ghost{background:transparent;color:#e9f0ff;border:1px solid #2b3a78}
+  button.danger{background:#2a0f14;color:#ffc7c7;border:1px solid #5a1e25}
+  .mini{padding:6px 10px;border-radius:10px;font-size:12px}
+  .inp{width:100%;background:#0d152e;color:var(--text);border:1px solid #23305d;border-radius:10px;padding:9px 11px}
+  .grid{display:grid;gap:12px}
+  .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  @media (max-width:860px){.grid.cols-2{grid-template-columns:1fr}}
+  .right-wrap{position:relative;min-width:220px}
+  .manage{position:absolute;top:-6px;right:-6px;display:flex;gap:6px;z-index:1}
+  .badges.has-actions{padding-right:170px}
+  @media (max-width:560px){.right-wrap{position:static}.manage{position:static;margin-top:6px}.badges.has-actions{padding-right:0}}
+  .file-row{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#0c142c;border:1px solid #23305d;border-radius:12px;padding:8px 10px}
+  .flex{display:flex;gap:8px;align-items:center}
+  .thumb{width:160px;height:100px;border-radius:10px;object-fit:cover;border:1px solid #23305d}
+  .select-cb{display:none}.selecting .select-cb{display:inline-block}
+  .small{font-size:12px}
+</style>
 </head>
 <body>
-<header>
+<header class="hdr">
   <div class="wrap row">
     <div class="row"><strong>📄 포트폴리오</strong><span id="owner-chip" class="chip"></span></div>
-    <div class="row" style="margin-left:auto">
+    <div class="row ml-auto gap8">
       <span id="user-line" class="muted">로그인 필요</span>
-      <button id="btn-login" class="secondary" aria-label="구글 로그인">Google 로그인</button>
-      <button id="btn-logout" class="secondary" style="display:none" aria-label="로그아웃">로그아웃</button>
-      <a id="btn-home" class="secondary" href="index.html" aria-label="메인으로">메인</a>
-      <button id="btn-copy" class="secondary" aria-label="공유 링크 복사">공유 링크</button>
+      <button id="btn-login" class="secondary">Google 로그인</button>
+      <button id="btn-logout" class="secondary" style="display:none">로그아웃</button>
+      <a id="btn-home" class="secondary" href="index.html">메인</a>
+      <button id="btn-copy" class="secondary">공유 링크</button>
     </div>
   </div>
 </header>
 
-<main class="wrap" style="padding:16px 18px">
+<main class="wrap pad16">
   <section class="card">
-    <h2 style="margin:0 0 8px">프로젝트 작성</h2>
+    <h2 class="ttl">프로젝트 작성</h2>
     <p id="write-hint" class="muted">이 페이지의 소유자/관리자/초대된 친구만 작성할 수 있어요.</p>
     <form id="form-new" class="list" style="display:none">
-      <input id="p-title" placeholder="제목" required aria-label="제목"/>
-      <textarea id="p-desc" placeholder="설명" required aria-label="설명"></textarea>
-      <div class="row" style="gap:8px">
-        <input id="p-tags" placeholder="태그(쉼표 구분) 예: ar, esp32" style="flex:1" aria-label="태그"/>
-        <input id="p-mainfile" type="file" style="flex:1" aria-label="대표 첨부파일"/>
+      <input id="p-title" class="inp" placeholder="제목" required/>
+      <textarea id="p-desc" class="inp" placeholder="설명" required></textarea>
+      <div class="row gap8">
+        <input id="p-tags" class="inp" placeholder="태그(쉼표 구분) 예: ar, esp32" style="flex:1"/>
+        <input id="p-mainfile" class="inp" type="file" style="flex:1"/>
       </div>
       <div class="row"><button type="submit">등록</button></div>
     </form>
   </section>
 
-  <section class="card" style="margin-top:14px">
-    <div class="row" style="justify-content:space-between">
-      <h2 style="margin:0">프로젝트 목록</h2>
-      <button id="btn-refresh" class="secondary" aria-label="새로고침">새로고침</button>
+  <section class="card mt14">
+    <div class="row space">
+      <h2 class="ttl">프로젝트 목록</h2>
+      <div class="row gap8">
+        <input id="search-input" class="inp" placeholder="검색: 키워드 또는 #태그" style="min-width:220px">
+        <button id="btn-refresh" class="secondary">새로고침</button>
+      </div>
     </div>
-    <div id="list" class="list" style="margin-top:10px"></div>
+    <div id="list" class="list mt10"></div>
   </section>
 </main>
 
@@ -63,72 +91,33 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
-  const cfg = {
-    apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",
-    authDomain:"propot-cc6bf.firebaseapp.com",
-    projectId:"propot-cc6bf",
-    storageBucket:"propot-cc6bf.firebasestorage.app",
-    appId:"1:30940698980:web:1729f30e68d3beb24ac271"
-  };
+  const cfg={apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",authDomain:"propot-cc6bf.firebaseapp.com",projectId:"propot-cc6bf",storageBucket:"propot-cc6bf.firebasestorage.app",appId:"1:30940698980:web:1729f30e68d3beb24ac271"};
   firebase.initializeApp(cfg);
   const auth=firebase.auth(), db=firebase.firestore(), storage=firebase.storage();
 
-  const $ = s=>document.querySelector(s);
-  const esc = s=>String(s||'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const parseTags = v=>String(v||'').split(/[, \t]+/).map(x=>x.trim().replace(/^#/,'').toLowerCase()).filter(Boolean).slice(0,10);
+  const $=s=>document.querySelector(s);
+  const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const parseTags=v=>String(v||'').split(/[, \t]+/).map(x=>x.trim().replace(/^#/,'').toLowerCase()).filter(Boolean).slice(0,10);
+  const fmt=ts=>{ if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleString(); };
 
-  // === Error logging (same as index.html)
-  async function logError(error, context) {
-    try {
-      await db.collection('clientLogs').add({
-        at: firebase.firestore.FieldValue.serverTimestamp(),
-        path: location.pathname + location.search,
-        uid: (auth.currentUser && auth.currentUser.uid) || null,
-        context: context || null,
-        message: String(error && (error.message || error)) || '',
-        stack: String(error && error.stack) || ''
-      });
-    } catch (_) {}
-  }
-  window.addEventListener('error', (e)=>logError(e.error||e.message, 'window.error'));
-  window.addEventListener('unhandledrejection', (e)=>logError(e.reason, 'unhandledrejection'));
-
-  const params = new URLSearchParams(location.search);
-  const ownerUid = params.get('uid');
+  const params=new URLSearchParams(location.search); const ownerUid=params.get('uid');
   if(!ownerUid){ alert('잘못된 접근: uid가 없습니다.'); location.href='index.html'; }
-  $('#owner-chip').textContent = `owner: ${ownerUid.slice(0,8)}…`;
+  $('#owner-chip').textContent=`owner: ${ownerUid.slice(0,8)}…`;
+  const shareUrl=`${location.origin}${location.pathname}?uid=${encodeURIComponent(ownerUid)}`;
+  $('#btn-copy').onclick=async()=>{ await navigator.clipboard.writeText(shareUrl); alert('공유 링크 복사됨'); };
 
-  const shareUrl = `${location.origin}${location.pathname}?uid=${encodeURIComponent(ownerUid)}`;
-  $('#btn-copy').onclick = async ()=>{ try{ await navigator.clipboard.writeText(shareUrl); alert('공유 링크 복사됨'); } catch(e){ logError(e,'copy'); alert('복사 실패: '+e.message); } };
+  let me=null,isAdmin=false,canWrite=false;
+  let loadedProjects=[];
+  const selComments=new Map(); const selFiles=new Map();
 
-  let me=null, isAdmin=false, canWrite=false;
-
-  $('#btn-login').onclick = ()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>{ logError(e,'login'); alert(e.message); });
-  $('#btn-logout').onclick= ()=>auth.signOut();
-  $('#btn-refresh').onclick= ()=>loadProjects();
-
-  function fmt(ts){ if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleString(); }
-
-  async function computePermission(){
-    if(!me){ canWrite=false; $('#form-new').style.display='none'; return; }
-    const isOwner = me.uid===ownerUid;
-    let isFriend = false;
-    if(!isOwner && !isAdmin){
-      try{
-        const q = await db.collection('friends')
-          .where('ownerUid','==',ownerUid).where('friendUid','==',me.uid).limit(1).get();
-        isFriend = !q.empty;
-      }catch(e){ logError(e,'friend-check'); }
-    }
-    canWrite = isOwner || isFriend || isAdmin;
-    $('#write-hint').textContent = canWrite ? '작성 가능 사용자입니다.' : '작성 권한이 없습니다.';
-    $('#form-new').style.display = canWrite ? '' : 'none';
-  }
+  $('#btn-login').onclick=()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>alert(e.message));
+  $('#btn-logout').onclick=()=>auth.signOut();
+  $('#btn-refresh').onclick=()=>loadProjects();
 
   auth.onAuthStateChanged(async u=>{
     me=u;
     if(u){
-      $('#user-line').textContent = `${u.displayName||'익명'} (${u.email||''})`;
+      $('#user-line').textContent=`${u.displayName||'익명'} (${u.email||''})`;
       $('#btn-login').style.display='none'; $('#btn-logout').style.display='';
       try{ isAdmin=(await db.collection('roles').doc(u.uid).get()).exists; }catch{ isAdmin=false; }
     }else{
@@ -139,87 +128,252 @@
     await loadProjects();
   });
 
-  async function loadProjects(){
-    const box = $('#list'); box.innerHTML='<div class="muted">불러오는 중…</div>';
-    try{
-      const snap = await db.collection('projects')
-        .where('ownerUid','==',ownerUid)
-        .orderBy('createdAt','desc').limit(100).get();
-      box.innerHTML='';
-      if(snap.empty){ box.innerHTML='<div class="muted">아직 글이 없습니다.</div>'; return; }
-      snap.forEach(doc=>renderProject(doc.id, doc.data()));
-    }catch(e){ logError(e,'loadProjects'); box.innerHTML=`<div class="muted">불러오기 실패: ${esc(e.message)}</div>`; }
+  async function computePermission(){
+    if(!me){ canWrite=false; $('#form-new').style.display='none'; return; }
+    const isOwner=me.uid===ownerUid; let isFriend=false;
+    if(!isOwner && !isAdmin){
+      try{
+        const q=await db.collection('friends').where('ownerUid','==',ownerUid).where('friendUid','==',me.uid).limit(1).get();
+        isFriend=!q.empty;
+      }catch(e){ console.warn('friend check error',e); }
+    }
+    canWrite=isOwner||isFriend||isAdmin;
+    $('#write-hint').textContent=canWrite?'작성 가능 사용자입니다.':'작성 권한이 없습니다.';
+    $('#form-new').style.display=canWrite?'':'none';
   }
 
-  function renderProject(id, d){
-    const mine = me && (me.uid===d.authorUid);
-    const allowManage = me && (mine || isAdmin);
-    const el = document.createElement('article');
-    el.className='project';
-    el.innerHTML = `
-      <div class="row" style="justify-content:space-between;align-items:flex-start">
+  const searchInput=document.getElementById('search-input'); if(searchInput) searchInput.addEventListener('input', applyFilter);
+  function applyFilter(){
+    if(!searchInput){ renderProjects(loadedProjects); return; }
+    const q=(searchInput.value||'').trim(); if(!q){ renderProjects(loadedProjects); return; }
+    const tokens=q.split(/\s+/); const tagFilt=tokens.filter(t=>t.startsWith('#')).map(t=>t.slice(1).toLowerCase());
+    const kw=tokens.filter(t=>!t.startsWith('#')).map(t=>t.toLowerCase());
+    const filtered=loadedProjects.filter(({data})=>{
+      const hay=(data.title+' '+data.desc+' '+(data.authorName||'')+' '+(data.tags||[]).join(' ')).toLowerCase();
+      const tags=(data.tags||[]).map(t=>String(t).toLowerCase());
+      const okTags=tagFilt.length===0||tagFilt.every(t=>tags.includes(t));
+      const okKw=kw.length===0||kw.every(k=>hay.includes(k));
+      return okTags&&okKw;
+    });
+    renderProjects(filtered);
+  }
+
+  async function loadProjects(){
+    const box=$('#list'); box.innerHTML='<div class="muted">불러오는 중…</div>';
+    try{
+      let snap; try{
+        snap=await db.collection('projects').where('ownerUid','==',ownerUid).orderBy('createdAt','desc').limit(100).get();
+      }catch(e){
+        console.warn('인덱스 필요 혹은 쿼리 실패, 클라 정렬 fallback:',e.message);
+        snap=await db.collection('projects').where('ownerUid','==',ownerUid).limit(100).get();
+      }
+      loadedProjects=[]; snap.forEach(doc=>loadedProjects.push({id:doc.id,data:doc.data()}));
+      loadedProjects.sort((a,b)=>((b.data.createdAt?.toMillis?.()||0)-(a.data.createdAt?.toMillis?.()||0)));
+      renderProjects(loadedProjects); applyFilter();
+    }catch(e){ $('#list').innerHTML=`<div class="muted">불러오기 실패: ${esc(e.message)}</div>`; }
+  }
+
+  function renderProjects(list){
+    const listEl=$('#list'); listEl.innerHTML='';
+    if(!list||!list.length){ listEl.innerHTML='<div class="muted">아직 글이 없습니다.</div>'; return; }
+    list.forEach(({id,data})=>renderProjectCard(id,data,listEl));
+  }
+
+  function renderProjectCard(id,d,listEl){
+    const mine=me&&(me.uid===d.authorUid); const allowManage=me&&(mine||isAdmin);
+    const card=document.createElement('article'); card.className='project';
+    card.innerHTML=`
+      <div class="row space">
         <div>
           <h3 style="margin:0">${esc(d.title)}</h3>
-          <div class="muted" style="margin:2px 0 8px">${esc(d.authorName||'익명')} · ${fmt(d.createdAt)}</div>
-          <p style="margin:0">${esc(d.desc)}</p>
-          ${(d.tags&&d.tags.length)?`<div class="row" style="gap:6px;margin-top:6px">${d.tags.map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}</div>`:''}
-          ${d.mainFile?.url?`<div style="margin-top:6px"><a class="chip" href="${d.mainFile.url}" target="_blank" rel="noopener">첨부 보기</a></div>`:''}
+          <div class="muted mt2">${esc(d.authorName||'익명')} · ${fmt(d.createdAt)}</div>
+          <p style="margin:6px 0 0">${esc(d.desc)}</p>
+          ${(d.tags&&d.tags.length)?`<div class="row wrap" style="gap:6px;margin-top:6px">${d.tags.map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}</div>`:''}
         </div>
-        <div class="row" style="gap:6px">
-          ${allowManage?`<button class="secondary" data-act="edit" aria-label="게시글 수정">수정</button><button class="secondary" data-act="del" aria-label="게시글 삭제">삭제</button>`:''}
+        <div class="right-wrap">
+          <div class="badges ${allowManage?'has-actions':''}">
+            ${d.mainFile?.url?`<a class="chip" href="${d.mainFile.url}" target="_blank" rel="noopener">첨부 보기</a>`:''}
+            ${d.mainFile?.name?`<span class="chip">${esc(d.mainFile.name)}</span>`:''}
+            <span class="chip">ID: ${id}</span>
+          </div>
+          ${allowManage?`
+          <div class="manage">
+            <button class="ghost mini" id="btn-edit-${id}">수정</button>
+            <button class="danger mini" id="btn-del-${id}">삭제</button>
+            <button class="secondary mini" id="btn-save-${id}" style="display:none;">저장</button>
+            <button class="ghost mini" id="btn-cancel-${id}" style="display:none;">취소</button>
+          </div>`:''}
         </div>
-      </div>`;
-    const btns = el.querySelectorAll('button[data-act]');
-    btns.forEach(b=>{
-      b.onclick=async()=>{
-        if(b.dataset.act==='del'){
-          if(!confirm('삭제할까요?')) return;
-          try{ await db.collection('projects').doc(id).delete(); loadProjects(); }
-          catch(e){ logError(e,'post-delete'); alert('삭제 실패: '+e.message); }
-        }else{
-          const nt = prompt('새 제목', d.title||''); if(nt==null) return;
-          const nd = prompt('새 설명', d.desc||''); if(nd==null) return;
-          try{
-            await db.collection('projects').doc(id).update({
-              title: nt.trim(),
-              desc: nd.trim(),
-              updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-            });
-            loadProjects();
-          }catch(e){ logError(e,'post-edit'); alert('수정 실패: '+e.message); }
-        }
-      };
-    });
-    $('#list').appendChild(el);
+      </div>
+
+      <div id="view-${id}-desc"></div>
+
+      <form id="edit-${id}-form" class="list" style="display:none">
+        <input id="e-title-${id}" class="inp" type="text" value="${esc(d.title)}" required/>
+        <textarea id="e-desc-${id}" class="inp" required>${esc(d.desc)}</textarea>
+        <div class="grid" style="gap:6px">
+          <div class="muted">대표 첨부: ${d.mainFile?.name?esc(d.mainFile.name):'없음'}</div>
+          <div class="row wrap gap8">
+            <input type="file" id="e-mainfile-${id}"/>
+            ${d.mainFile?.url?`<a class="chip" href="${d.mainFile.url}" target="_blank" rel="noopener">현재 첨부 열기</a>`:''}
+            ${d.mainFile?`<button type="button" class="danger mini" id="e-mainfile-del-${id}">첨부 삭제</button>`:''}
+            <button type="button" class="secondary mini" id="e-mainfile-up-${id}">첨부 교체 업로드</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="grid cols-2 mt8">
+        <div>
+          <h4 style="margin:6px 0">💬 댓글</h4>
+          <div class="row wrap gap8" id="c-toolbar-${id}">
+            <button class="ghost mini" id="c-enter-${id}">선택</button>
+            <button class="secondary mini" id="c-edit-${id}" style="display:none" disabled>선택 수정(1개)</button>
+            <button class="danger mini" id="c-del-${id}" style="display:none" disabled>선택 삭제</button>
+            <span class="muted" id="c-count-${id}" style="display:none">0개 선택</span>
+            <button class="ghost mini" id="c-cancel-${id}" style="display:none">취소</button>
+          </div>
+          <div class="list" id="comments-${id}"></div>
+          <form class="list" id="form-comment-${id}">
+            <textarea id="c-${id}" class="inp" placeholder="의견을 남겨주세요 (로그인 필요)" required></textarea>
+            <div class="row"><button type="submit" class="secondary">댓글 등록</button></div>
+          </form>
+        </div>
+        <div>
+          <h4 style="margin:6px 0">📎 파일 업로드</h4>
+          <div class="row wrap gap8" id="f-toolbar-${id}">
+            <button class="ghost mini" id="f-enter-${id}">선택</button>
+            <button class="secondary mini" id="f-rename-${id}" style="display:none" disabled>이름수정(1개)</button>
+            <input type="file" id="f-repl-input-${id}" style="display:none"/>
+            <button class="secondary mini" id="f-replace-${id}" style="display:none" disabled>파일교체(1개)</button>
+            <button class="danger mini" id="f-del-${id}" style="display:none" disabled>선택 삭제</button>
+            <span class="muted" id="f-count-${id}" style="display:none">0개 선택</span>
+            <button class="ghost mini" id="f-cancel-${id}" style="display:none">취소</button>
+          </div>
+          <div class="list" id="files-${id}"></div>
+          <form class="row wrap" id="form-file-${id}">
+            <input type="file" id="f-${id}" class="inp"/>
+            <button type="submit">업로드</button>
+          </form>
+        </div>
+      </div>
+    `;
+    listEl.appendChild(card);
+
+    // 게시글 수정/삭제 + 대표첨부
+    if(allowManage){
+      const btnEdit=$(`#btn-edit-${id}`),btnDel=$(`#btn-del-${id}`),btnSave=$(`#btn-save-${id}`),btnCancel=$(`#btn-cancel-${id}`);
+      const editForm=$(`#edit-${id}-form`), viewDesc=$(`#view-${id}-desc`);
+      const enter=()=>{editForm.style.display='';viewDesc.style.display='none';btnEdit.style.display='none';btnDel.style.display='none';btnSave.style.display='';btnCancel.style.display='';};
+      const exit =()=>{editForm.style.display='none';viewDesc.style.display='';btnEdit.style.display='';btnDel.style.display='';btnSave.style.display='none';btnCancel.style.display='none';};
+      const save=async()=>{const t=$(`#e-title-${id}`).value.trim(), dd=$(`#e-desc-${id}`).value.trim(); if(!t||!dd) return alert('제목/설명 입력'); try{ await db.collection('projects').doc(id).update({title:t,desc:dd,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); loadProjects(); }catch(e){ alert('수정 실패: '+e.message); }};
+      btnEdit&&btnEdit.addEventListener('click',enter);
+      btnCancel&&btnCancel.addEventListener('click',exit);
+      btnSave&&btnSave.addEventListener('click',save);
+      btnDel&&btnDel.addEventListener('click',async()=>{
+        if(!confirm('프로젝트를 삭제하면 댓글/파일도 함께 지워집니다. 진행할까요?')) return;
+        try{
+          const ref=db.collection('projects').doc(id);
+          let cs=await ref.collection('comments').limit(500).get();
+          while(!cs.empty){ const b=db.batch(); cs.docs.forEach(d=>b.delete(d.ref)); await b.commit(); cs=await ref.collection('comments').limit(500).get(); }
+          const fs=await ref.collection('files').limit(500).get();
+          for(const ddoc of fs.docs){ const f=ddoc.data(); if(f.storagePath){ try{ await storage.ref().child(f.storagePath).delete(); }catch(e){ console.warn('스토리지 삭제 실패',e?.message||e);} } await ddoc.ref.delete(); }
+          if(d.mainFile?.storagePath){ try{ await storage.ref().child(d.mainFile.storagePath).delete(); }catch(e){} }
+          await ref.delete(); loadProjects();
+        }catch(e){ alert('삭제 실패: '+e.message); }
+      });
+
+      const mainInp=$(`#e-mainfile-${id}`), mainUp=$(`#e-mainfile-up-${id}`), mainDel=$(`#e-mainfile-del-${id}`);
+      mainUp&&mainUp.addEventListener('click',async()=>{
+        const f=mainInp?.files?.[0]; if(!f) return alert('파일 선택'); if(f.size>10*1024*1024) return alert('10MB 이하만 업로드');
+        try{
+          const p=`uploads/${id}/main_${Date.now()}_${f.name}`; const ref=storage.ref().child(p);
+          await ref.put(f,{customMetadata:{ownerUid:(auth.currentUser&&auth.currentUser.uid)||''}}); const url=await ref.getDownloadURL();
+          await db.collection('projects').doc(id).update({ mainFile:{name:f.name,size:f.size,contentType:f.type,url,storagePath:p,uploadedAt:firebase.firestore.FieldValue.serverTimestamp(),ownerUid:(auth.currentUser&&auth.currentUser.uid)||''}, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+          if(d.mainFile?.storagePath){ try{ await storage.ref().child(d.mainFile.storagePath).delete(); }catch(e){} }
+          loadProjects();
+        }catch(e){ alert('첨부 교체 실패: '+e.message); }
+      });
+      mainDel&&mainDel.addEventListener('click',async()=>{
+        if(!confirm('대표 첨부를 삭제할까요?')) return;
+        try{
+          if(d.mainFile?.storagePath){ try{ await storage.ref().child(d.mainFile.storagePath).delete(); }catch(e){} }
+          await db.collection('projects').doc(id).update({ mainFile:null, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+          loadProjects();
+        }catch(e){ alert('첨부 삭제 실패: '+e.message); }
+      });
+    }
+
+    setupCommentToolbar(id); loadComments(id);
+    setupFileToolbar(id);    loadFiles(id);
+    document.getElementById(`form-comment-${id}`).addEventListener('submit',ev=>addComment(ev,id));
+    document.getElementById(`form-file-${id}`).addEventListener('submit',ev=>uploadFile(ev,id));
   }
 
-  // 새 글
-  document.getElementById('form-new').addEventListener('submit', async e=>{
-    e.preventDefault(); if(!me || !canWrite) return alert('권한 없음');
-    const title=$('#p-title').value.trim(), desc=$('#p-desc').value.trim();
-    const tags=parseTags($('#p-tags').value); const mf=$('#p-mainfile').files[0];
-    if(!title || !desc) return alert('제목/설명은 필수');
-    try{
-      const ref = await db.collection('projects').add({
-        ownerUid, title, desc, tags,
-        authorUid: me.uid, authorName: me.displayName||'익명', authorEmail: me.email||null,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        mainFile: null
-      });
-      if(mf){
-        if(mf.size>10*1024*1024) throw new Error('파일은 최대 10MB');
-        const path=`uploads/${ref.id}/main_${Date.now()}_${mf.name}`;
-        const snap=await storage.ref().child(path).put(mf,{customMetadata:{ownerUid:me.uid}});
-        const url=await snap.ref.getDownloadURL();
-        await ref.update({ mainFile:{name:mf.name,size:mf.size,contentType:mf.type,url,storagePath:path,uploadedAt:firebase.firestore.FieldValue.serverTimestamp(),ownerUid:me.uid}});
-      }
-      e.target.reset(); loadProjects();
-    }catch(err){ logError(err,'post-create'); alert('등록 실패: '+err.message); }
-  });
+  // 댓글
+  function setupCommentToolbar(pid){
+    const enter=$(`#c-enter-${pid}`), edit=$(`#c-edit-${pid}`), del=$(`#c-del-${pid}`), cancel=$(`#c-cancel-${pid}`), count=$(`#c-count-${pid}`);
+    selComments.set(pid,new Set());
+    const updateUI=()=>{const n=selComments.get(pid).size; count.textContent=`${n}개 선택`; edit.disabled=(n!==1); del.disabled=(n===0);};
+    enter.addEventListener('click',()=>{ $(`#comments-${pid}`).classList.add('selecting'); edit.style.display=''; del.style.display=''; count.style.display=''; cancel.style.display=''; enter.style.display='none'; updateUI(); });
+    cancel.addEventListener('click',()=>{ selComments.set(pid,new Set()); const list=$(`#comments-${pid}`); list.classList.remove('selecting'); list.querySelectorAll('.select-cb').forEach(cb=>cb.checked=false); edit.style.display='none'; del.style.display='none'; count.style.display='none'; cancel.style.display='none'; enter.style.display=''; updateUI(); });
+    edit.addEventListener('click',async()=>{ const set=selComments.get(pid); if(set.size!==1) return; const cid=[...set][0]; let cur=''; try{ const dd=await db.collection('projects').doc(pid).collection('comments').doc(cid).get(); cur=(dd.data()?.text)||''; }catch{} const next=prompt('새 댓글 내용',cur); if(next==null) return; const newText=(next||'').trim(); if(!newText) return alert('내용을 입력하세요.'); try{ await db.collection('projects').doc(pid).collection('comments').doc(cid).update({text:newText,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); loadComments(pid);}catch(e){ alert('댓글 수정 실패: '+e.message);} });
+    del.addEventListener('click',async()=>{ const set=selComments.get(pid); if(set.size===0) return; if(!confirm(`${set.size}개 댓글을 삭제할까요?`)) return; try{ const batch=db.batch(); set.forEach(cid=>batch.delete(db.collection('projects').doc(pid).collection('comments').doc(cid))); await batch.commit(); loadComments(pid);}catch(e){ alert('댓글 삭제 실패: '+e.message);} });
+    enter._update=updateUI;
+  }
 
-  // 공유 링크 복사
-  // (위에서 정의)
+  async function loadComments(pid){
+    const box=$('#comments-'+pid); box.innerHTML='<div class="muted">불러오는 중…</div>';
+    try{
+      const snap=await db.collection('projects').doc(pid).collection('comments').orderBy('createdAt','desc').limit(100).get();
+      box.innerHTML=''; if(snap.empty){ box.innerHTML='<div class="muted">아직 댓글이 없습니다.</div>'; return; }
+      const set=selComments.get(pid)||new Set();
+      snap.forEach(doc=>{
+        const c=doc.data(), cid=doc.id, can=me&&(me.uid===c.authorUid||isAdmin); const idS=`${pid}-${cid}`;
+        const el=document.createElement('div'); el.className='project'; el.innerHTML=`<div class="row space"><div style="flex:1"><div class="muted small">${esc(c.authorName||'익명')} · ${fmt(c.createdAt)}${c.updatedAt?' (수정됨)':''}</div><div>${esc(c.text)}</div></div><div><input type="checkbox" class="select-cb" ${can?'':'disabled'} id="c-cb-${idS}" data-cid="${cid}"></div></div>`;
+        box.appendChild(el);
+        const cb=el.querySelector(`#c-cb-${idS}`); if(cb){ cb.checked=set.has(cid); cb.addEventListener('change',()=>{ const S=selComments.get(pid); if(cb.checked) S.add(cid); else S.delete(cid); const btn=$(`#c-enter-${pid}`); btn&&btn._update&&btn._update(); }); }
+      });
+      const btn=$(`#c-enter-${pid}`); btn&&btn._update&&btn._update();
+    }catch(e){ box.innerHTML=`<div class="muted">댓글 로드 실패: ${esc(e.message)}</div>`; }
+  }
+
+  async function addComment(e,pid){
+    e.preventDefault(); if(!me) return alert('로그인이 필요합니다.');
+    const text=($(`#c-${pid}`).value||'').trim(); if(!text) return;
+    try{ await db.collection('projects').doc(pid).collection('comments').add({text,createdAt:firebase.firestore.FieldValue.serverTimestamp(),authorUid:me.uid,authorName:me.displayName||'익명'}); $(`#c-${pid}`).value=''; loadComments(pid);}catch(e){ alert('댓글 등록 실패: '+e.message);}
+  }
+
+  // 파일
+  function setupFileToolbar(pid){
+    const enter=$(`#f-enter-${pid}`), ren=$(`#f-rename-${pid}`), repIn=$(`#f-repl-input-${pid}`), rep=$(`#f-replace-${pid}`), del=$(`#f-del-${pid}`), cancel=$(`#f-cancel-${pid}`), count=$(`#f-count-${pid}`);
+    selFiles.set(pid,new Set());
+    const updateUI=()=>{ const n=selFiles.get(pid).size; count.textContent=`${n}개 선택`; ren.disabled=(n!==1); rep.disabled=(n!==1); del.disabled=(n===0); repIn.style.display=(n===1)?'':'none'; };
+    enter.addEventListener('click',()=>{ $(`#files-${pid}`).classList.add('selecting'); ren.style.display=''; rep.style.display=''; del.style.display=''; count.style.display=''; cancel.style.display=''; enter.style.display='none'; updateUI();});
+    cancel.addEventListener('click',()=>{ selFiles.set(pid,new Set()); const list=$(`#files-${pid}`); list.classList.remove('selecting'); list.querySelectorAll('.select-cb').forEach(cb=>cb.checked=false); ren.style.display='none'; rep.style.display='none'; del.style.display='none'; count.style.display='none'; cancel.style.display='none'; enter.style.display=''; repIn.style.display='none'; updateUI();});
+    ren.addEventListener('click',async()=>{ const set=selFiles.get(pid); if(set.size!==1) return; const fid=[...set][0]; let cur=''; try{ const d=await db.collection('projects').doc(pid).collection('files').doc(fid).get(); cur=(d.data()?.name)||'';}catch{} const next=prompt('새 파일 이름(표시용)',cur); if(next==null) return; try{ await db.collection('projects').doc(pid).collection('files').doc(fid).update({name:(next.trim()||cur),updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); loadFiles(pid);}catch(e){ alert('파일 이름 수정 실패: '+e.message);} });
+    rep.addEventListener('click',async()=>{ const set=selFiles.get(pid); if(set.size!==1) return; const fid=[...set][0]; const nf=repIn.files&&repIn.files[0]; if(!nf) return alert('교체할 새 파일을 선택하세요.'); if(nf.size>10*1024*1024) return alert('10MB 이하만 업로드'); try{ const doc=await db.collection('projects').doc(pid).collection('files').doc(fid).get(); const old=doc.data(); const path=`uploads/${pid}/${Date.now()}_${nf.name}`; const ref=storage.ref().child(path); await ref.put(nf,{customMetadata:{ownerUid:(old?.ownerUid)||(me?.uid)||''}}); const url=await ref.getDownloadURL(); await db.collection('projects').doc(pid).collection('files').doc(fid).update({name:nf.name,size:nf.size,contentType:nf.type,url,storagePath:path,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); if(old?.storagePath){ try{ await storage.ref().child(old.storagePath).delete(); }catch(e){ console.warn('이전 파일 삭제 실패',e?.message||e);} } repIn.value=''; loadFiles(pid);}catch(e){ alert('파일 교체 실패: '+e.message);} });
+    del.addEventListener('click',async()=>{ const set=selFiles.get(pid); if(set.size===0) return; if(!confirm(`${set.size}개 파일을 삭제할까요?`)) return; try{ for(const fid of set){ const doc=await db.collection('projects').doc(pid).collection('files').doc(fid).get(); const f=doc.data(); if(f?.storagePath){ try{ await storage.ref().child(f.storagePath).delete(); }catch(e){ console.warn('스토리지 삭제 실패',e?.message||e);} } await db.collection('projects').doc(pid).collection('files').doc(fid).delete(); } loadFiles(pid);}catch(e){ alert('파일 삭제 실패: '+e.message);} });
+    enter._update=updateUI;
+  }
+
+  async function loadFiles(pid){
+    const box=$(`#files-${pid}`); box.innerHTML='<div class="muted">불러오는 중…</div>';
+    try{
+      const snap=await db.collection('projects').doc(pid).collection('files').orderBy('createdAt','desc').limit(100).get();
+      box.innerHTML=''; const set=selFiles.get(pid)||new Set(); if(snap.empty){ box.innerHTML='<div class="muted">업로드된 파일이 없습니다.</div>'; return; }
+      snap.forEach(doc=>{ const f=doc.data(), fid=doc.id, can=me&&(me.uid===f.ownerUid||isAdmin); const idS=`${pid}-${fid}`; const isImg=(f.contentType||'').startsWith('image/'); const row=document.createElement('div'); row.className='file-row'; row.id='file-'+idS; row.innerHTML=`<div class="flex" style="flex:1;gap:10px">${isImg?`<img class="thumb" src="${esc(f.url)}" alt="${esc(f.name||'image')}">`:''}<div><div class="muted">${esc(f.name||'파일')} (${f.size||0}B)</div><a href="${esc(f.url)}" target="_blank" rel="noopener">${isImg?'원본 열기':'다운로드'}</a>${f.updatedAt?`<span class="chip" style="margin-left:6px">수정됨</span>`:''}</div></div><div><input type="checkbox" class="select-cb" ${can?'':'disabled'} id="f-cb-${idS}" data-fid="${fid}"></div>`; box.appendChild(row); const cb=row.querySelector(`#f-cb-${idS}`); if(cb){ cb.checked=set.has(fid); cb.addEventListener('change',()=>{ const S=selFiles.get(pid); if(cb.checked) S.add(fid); else S.delete(fid); const btn=$(`#f-enter-${pid}`); btn&&btn._update&&btn._update(); }); } }); const btn=$(`#f-enter-${pid}`); btn&&btn._update&&btn._update();
+    }catch(e){ box.innerHTML=`<div class="muted">파일 로드 실패: ${esc(e.message)}</div>`; }
+  }
+
+  document.getElementById('form-new').addEventListener('submit',async e=>{
+    e.preventDefault(); if(!me||!canWrite) return alert('권한 없음');
+    const title=$('#p-title').value.trim(), desc=$('#p-desc').value.trim(); const tags=parseTags($('#p-tags').value); const mf=$('#p-mainfile').files[0]; if(!title||!desc) return alert('제목/설명은 필수');
+    try{
+      const ref=await db.collection('projects').add({ownerUid,title,desc,tags,authorUid:me.uid,authorName:me.displayName||'익명',authorEmail:me.email||null,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),mainFile:null});
+      if(mf){ if(mf.size>10*1024*1024) throw new Error('파일은 최대 10MB'); const path=`uploads/${ref.id}/main_${Date.now()}_${mf.name}`; const snap=await storage.ref().child(path).put(mf,{customMetadata:{ownerUid:me.uid}}); const url=await snap.ref.getDownloadURL(); await ref.update({mainFile:{name:mf.name,size:mf.size,contentType:mf.type,url,storagePath:path,uploadedAt:firebase.firestore.FieldValue.serverTimestamp(),ownerUid:me.uid}}); }
+      e.target.reset(); loadProjects();
+    }catch(err){ alert('등록 실패: '+err.message); }
+  });
 </script>
 </body>
 </html>

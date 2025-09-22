@@ -1,283 +1,193 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>프로젝트 허브 · 메인</title>
-
-  <!-- Canonical & PWA/Theme -->
-  <link rel="canonical" href="https://kimys01.github.io/propot/">
-  <meta name="theme-color" content="#0b1020">
-
-  <!-- Favicon / OG / Twitter -->
-  <link rel="icon" href="web/favicon.svg">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="프로젝트 허브">
-  <meta property="og:description" content="내 포트폴리오와 친구 공동작업 공간">
-  <meta property="og:url" content="https://kimys01.github.io/propot/">
-  <meta property="og:image" content="https://kimys01.github.io/propot/web/og-card.png">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="프로젝트 허브">
-  <meta name="twitter:description" content="내 포트폴리오와 친구 공동작업 공간">
-  <meta name="twitter:image" content="https://kimys01.github.io/propot/web/og-card.png">
-
-  <!-- CSS (cache-busting 버전 쿼리) -->
-  <base href="https://kimys01.github.io/propot/">
-  <link rel="stylesheet" href="/propot/base.css?v=20250922">
-  <link rel="stylesheet" href="/propot/index.css?v=20250922">
-
-
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<base href="https://kimys01.github.io/propot/">
+<title>프로젝트 허브 · 메인</title>
+<style>
+  :root{--bg:#0b1020;--card:#121a33;--muted:#8aa0c7;--text:#e9f0ff;--accent:#6da7ff;--accent2:#8cffda;--danger:#ff6c6c;--bd:#1d274b}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Noto Sans KR,Malgun Gothic,sans-serif}
+  a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+  .hdr{position:sticky;top:0;background:#0b1020cc;border-bottom:1px solid #1e2a55;backdrop-filter:blur(8px);z-index:10}
+  .wrap{max-width:1024px;margin:0 auto;padding:14px 18px}
+  .row{display:flex;gap:10px;align-items:center}
+  .row.space{justify-content:space-between}
+  .row.gap8{gap:8px}
+  .row.ml-auto{margin-left:auto}
+  .row.wrap{flex-wrap:wrap}
+  .pad16{padding:16px 18px}
+  .mt10{margin-top:10px}.mt12{margin-top:12px}.mt14{margin-top:14px}.mt8{margin-top:8px}.mt2{margin-top:2px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px}
+  .list{display:grid;gap:10px}
+  .item{background:#0f1731;border:1px solid #23305d;border-radius:12px;padding:12px}
+  .chip{font-size:12px;padding:2px 8px;border:1px solid #2b3a78;border-radius:999px;color:#bcd0ff}
+  .muted{color:var(--muted)} .ttl{margin:0 0 8px}
+  button,input{font:inherit}
+  button{background:linear-gradient(135deg,var(--accent),#4f7fe0);color:#081225;border:0;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700}
+  button.secondary{background:#1b2750;color:#e9f0ff;border:1px solid #2b3a78}
+  button.ghost{background:transparent;color:#e9f0ff;border:1px solid #2b3a78}
+  .inp{width:100%;background:#0d152e;color:var(--text);border:1px solid #23305d;border-radius:12px;padding:10px 12px}
+  .grid{display:grid;gap:12px}
+  .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  @media (max-width:860px){.grid.cols-2{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-<header>
+<header class="hdr">
   <div class="wrap row">
-    <div class="row" style="gap:8px">
+    <div class="row gap8">
       <strong>📁 프로젝트 허브</strong><span class="chip">GitHub Pages + Firebase</span>
     </div>
-    <div class="row" style="margin-left:auto">
+    <div class="row ml-auto gap8">
       <span id="user-line" class="muted">로그인 필요</span>
-      <button id="btn-login" class="secondary" aria-label="구글 로그인">Google 로그인</button>
-      <button id="btn-logout" class="ghost" style="display:none" aria-label="로그아웃">로그아웃</button>
-      <button id="btn-my" class="secondary" style="display:none" aria-label="내 포트폴리오로 이동">내 포트폴리오로</button>
+      <button id="btn-login" class="secondary">Google 로그인</button>
+      <button id="btn-logout" class="ghost" style="display:none">로그아웃</button>
+      <button id="btn-my" class="secondary" style="display:none">내 포트폴리오로</button>
+      <a id="btn-admin" class="ghost" href="admin.html" style="display:none">관리자</a>
     </div>
   </div>
 </header>
 
-<main class="wrap" style="padding:16px 18px">
+<main class="wrap pad16">
   <div class="grid cols-2">
     <section class="card">
-      <h2 style="margin:0 0 8px">시작하기</h2>
-      <p class="muted" id="hello">로그인하면 내 개인 포트폴리오 페이지가 생성되고, 공유 링크로 친구를 초대할 수 있어요.</p>
+      <h2 class="ttl">시작하기</h2>
+      <p class="muted">로그인하면 내 개인 포트폴리오 페이지가 생성되고, 공유 링크로 친구를 초대할 수 있어요.</p>
+
       <div id="share-box" class="grid" style="display:none">
-        <label class="muted" for="share-url">내 공유 링크</label>
-        <div class="row" style="gap:8px">
-          <input id="share-url" readonly aria-readonly="true"/>
-          <button id="btn-copy" class="secondary" aria-label="공유 링크 복사">복사</button>
+        <label class="muted">내 공유 링크</label>
+        <div class="row gap8">
+          <input id="share-url" class="inp" readonly/>
+          <button id="btn-copy" class="secondary">복사</button>
         </div>
       </div>
-      <div id="invite-box" class="grid" style="margin-top:12px; display:none">
-        <h3 style="margin:8px 0">친구 초대</h3>
-        <p class="muted">아래에 친구 이메일 또는 UID를 입력하면 내 페이지에 글쓰기 권한을 부여합니다.</p>
-        <div class="row" style="gap:8px">
-          <input id="friend-input" placeholder="친구 이메일 또는 UID" aria-label="친구 이메일 또는 UID 입력"/>
-          <button id="btn-invite" aria-label="공유 추가">공유 추가</button>
+
+      <div id="invite-box" class="grid mt12" style="display:none">
+        <h3 class="ttl" style="font-size:18px">친구 초대</h3>
+        <p class="muted">친구 이메일 또는 UID를 입력하면 내 페이지에 글쓰기 권한을 부여합니다.</p>
+        <div class="row gap8">
+          <input id="friend-input" class="inp" placeholder="친구 이메일 또는 UID"/>
+          <button id="btn-invite">공유 추가</button>
         </div>
       </div>
     </section>
 
     <section class="card">
-      <h2 style="margin:0 0 8px">내가 공유한 친구</h2>
+      <h2 class="ttl">내가 공유한 친구</h2>
       <div id="my-friends" class="list"></div>
     </section>
   </div>
 
-  <section class="card" style="margin-top:14px">
-    <h2 style="margin:0 0 8px">나에게 공유해준 페이지</h2>
+  <section class="card mt14">
+    <h2 class="ttl">나에게 공유해준 페이지</h2>
     <div id="shared-to-me" class="list"></div>
   </section>
 
-  <section class="card" style="margin-top:14px">
-    <h2 style="margin:0 0 8px">도움말</h2>
+  <section class="card mt14">
+    <h2 class="ttl">도움말</h2>
     <ol class="muted">
-      <li>로그인 → “내 포트폴리오로”를 눌러 <code>u.html?uid=내UID</code> 페이지로 이동합니다.</li>
-      <li>친구를 초대하면 그 친구는 내 페이지에서 글/파일을 올릴 수 있어요.</li>
-      <li>아래 목록에서 공유 해제(삭제)도 가능합니다.</li>
+      <li>로그인 → “내 포트폴리오로”를 눌러 <code>u.html?uid=내UID</code> 로 이동</li>
+      <li>친구 초대 시 그 친구는 내 페이지에 글/파일 업로드 가능</li>
+      <li>아래 목록에서 공유 해제(삭제) 가능</li>
     </ol>
   </section>
 </main>
 
-<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
 <script>
-  // ===== Firebase =====
-  const firebaseConfig = {
-    apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",
-    authDomain:"propot-cc6bf.firebaseapp.com",
-    projectId:"propot-cc6bf",
-    appId:"1:30940698980:web:1729f30e68d3beb24ac271"
-  };
+  const firebaseConfig={apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",authDomain:"propot-cc6bf.firebaseapp.com",projectId:"propot-cc6bf",appId:"1:30940698980:web:1729f30e68d3beb24ac271"};
   firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db   = firebase.firestore();
+  const auth=firebase.auth(), db=firebase.firestore();
 
-  const $ = s=>document.querySelector(s);
-  const esc = s=>String(s||'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const lower = s => String(s||'').trim().toLowerCase();
+  const $=s=>document.querySelector(s);
+  const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const lower=s=>String(s||'').trim().toLowerCase();
+  let me=null,isAdmin=false;
 
-  let me=null, isAdmin=false;
+  $('#btn-login').onclick=()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>alert(e.message));
+  $('#btn-logout').onclick=()=>auth.signOut();
+  $('#btn-my').onclick=()=>{if(me)location.href=`u.html?uid=${encodeURIComponent(me.uid)}`};
+  $('#btn-copy').onclick=async()=>{await navigator.clipboard.writeText($('#share-url').value);alert('복사 완료!')};
 
-  // ===== 에러 로깅 (authenticated만 기록; 실패해도 앱 동작에는 영향 X)
-  async function logError(error, context) {
-    try {
-      await db.collection('clientLogs').add({
-        at: firebase.firestore.FieldValue.serverTimestamp(),
-        path: location.pathname + location.search,
-        uid: (auth.currentUser && auth.currentUser.uid) || null,
-        context: context || null,
-        message: String(error && (error.message || error)) || '',
-        stack: String(error && error.stack) || ''
-      });
-    } catch (_) { /* ignore logging errors */ }
-  }
-  window.addEventListener('error', (e)=>logError(e.error||e.message, 'window.error'));
-  window.addEventListener('unhandledrejection', (e)=>logError(e.reason, 'unhandledrejection'));
-
-  // ===== UI Actions
-  $('#btn-login').onclick = ()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>{ logError(e,'login'); alert(e.message); });
-  $('#btn-logout').onclick= ()=>auth.signOut();
-  $('#btn-my').onclick     = ()=>{ if(me) location.href=`u.html?uid=${encodeURIComponent(me.uid)}`; };
-
-  $('#btn-copy').onclick = async ()=>{
-    try { await navigator.clipboard.writeText($('#share-url').value); alert('복사 완료!'); }
-    catch (e) { logError(e,'copy'); alert('복사 실패: ' + e.message); }
-  };
-
-  // 최초/매 로그인 시 사용자 프로필 문서 upsert
   async function ensureUserDoc(u){
-    const ref = db.collection('users').doc(u.uid);
-    const snap = await ref.get();
-    const data = {
-      uid: u.uid,
-      displayName: u.displayName || '익명',
-      email: u.email || null,
-      emailLower: lower(u.email),
-      photoURL: u.photoURL || null,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    if(!snap.exists) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    const ref=db.collection('users').doc(u.uid); const snap=await ref.get();
+    const data={uid:u.uid,displayName:u.displayName||'익명',email:u.email||null,emailLower:lower(u.email),photoURL:u.photoURL||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    if(!snap.exists) data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
     await ref.set(data,{merge:true});
   }
 
-  // 친구 추가 (내가 소유자)
   async function inviteFriendByEmailOrUid(input){
-    const v = (input||'').trim();
-    if(!v) throw new Error('이메일 또는 UID를 입력하세요.');
-    if(v === me.uid) throw new Error('본인 UID는 초대할 수 없습니다.');
-    let friendUid = null, friendName = null, friendEmail=null;
-
+    const v=(input||'').trim(); if(!v) throw new Error('이메일 또는 UID를 입력하세요.'); if(v===me.uid) throw new Error('본인 UID는 초대 불가');
+    let friendUid=null, friendName=null, friendEmail=null;
     if(v.includes('@')){
-      const q = await db.collection('users').where('emailLower','==', lower(v)).limit(1).get();
-      if(q.empty) throw new Error('해당 이메일 사용자를 찾지 못했습니다. 먼저 상대가 로그인해야 해요.');
-      const doc = q.docs[0]; const u = doc.data();
-      friendUid = u.uid; friendName = u.displayName||'익명'; friendEmail=u.email||null;
+      const q=await db.collection('users').where('emailLower','==',lower(v)).limit(1).get();
+      if(q.empty) throw new Error('이메일 사용자를 찾지 못했습니다. 먼저 상대가 로그인해야 해요.');
+      const u=q.docs[0].data(); friendUid=u.uid; friendName=u.displayName||'익명'; friendEmail=u.email||null;
     }else{
-      const doc = await db.collection('users').doc(v).get();
-      if(!doc.exists) throw new Error('UID를 찾지 못했습니다. 먼저 상대가 로그인해야 해요.');
-      const u = doc.data(); friendUid = u.uid; friendName=u.displayName||'익명'; friendEmail=u.email||null;
+      const doc=await db.collection('users').doc(v).get(); if(!doc.exists) throw new Error('UID를 찾지 못했습니다. 먼저 상대가 로그인해야 해요.');
+      const u=doc.data(); friendUid=u.uid; friendName=u.displayName||'익명'; friendEmail=u.email||null;
     }
-
-    const id = `${me.uid}_${friendUid}`;
-    const ref = db.collection('friends').doc(id);
-    await ref.set({
-      ownerUid: me.uid,
-      friendUid,
-      friendName,
-      friendEmailLower: lower(friendEmail),
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    const id=`${me.uid}_${friendUid}`;
+    await db.collection('friends').doc(id).set({
+      ownerUid:me.uid, friendUid, friendName, friendEmailLower:lower(friendEmail),
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
     },{merge:true});
   }
 
   async function loadMyFriends(){
-    const box = $('#my-friends'); box.innerHTML = '<div class="muted">불러오는 중…</div>';
+    const box=$('#my-friends'); box.innerHTML='<div class="muted">불러오는 중…</div>';
     try{
-      const snap = await db.collection('friends')
-        .where('ownerUid','==', me.uid)
-        .orderBy('createdAt','desc').get();
-      box.innerHTML = '';
-      if(snap.empty){ box.innerHTML = '<div class="muted">아직 공유한 친구가 없습니다.</div>'; return; }
-      snap.forEach(d=>{
-        const f = d.data();
-        const row = document.createElement('div');
-        row.className='item';
-        row.innerHTML = `
-          <div class="row" style="justify-content:space-between">
-            <div>
-              <div><strong>${esc(f.friendName||'친구')}</strong></div>
-              <div class="muted">${esc(f.friendUid)}${f.friendEmailLower?' · '+esc(f.friendEmailLower):''}</div>
-            </div>
-            <div class="row" style="gap:8px">
-              <a class="ghost" href="u.html?uid=${encodeURIComponent(me.uid)}" aria-label="내 페이지 열기">내 페이지 열기</a>
-              <button data-id="${d.id}" class="ghost" aria-label="공유 해제">공유 해제</button>
-            </div>
-          </div>`;
-        row.querySelector('button[data-id]').onclick = async (ev)=>{
-          if(!confirm('이 친구의 권한을 해제할까요?')) return;
-          try { await db.collection('friends').doc(ev.target.dataset.id).delete(); loadMyFriends(); }
-          catch(e){ logError(e,'friend-unshare'); alert('삭제 실패: ' + e.message); }
-        };
+      let snap; try{
+        snap=await db.collection('friends').where('ownerUid','==',me.uid).orderBy('createdAt','desc').get();
+      }catch{ snap=await db.collection('friends').where('ownerUid','==',me.uid).get(); }
+      box.innerHTML=''; if(snap.empty){ box.innerHTML='<div class="muted">아직 공유한 친구가 없습니다.</div>'; return; }
+      snap.docs.sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0)).forEach(d=>{
+        const f=d.data();
+        const row=document.createElement('div'); row.className='item';
+        row.innerHTML=`<div class="row space"><div><div><strong>${esc(f.friendName||'친구')}</strong></div><div class="muted">${esc(f.friendUid)}${f.friendEmailLower?' · '+esc(f.friendEmailLower):''}</div></div><div class="row gap8"><a class="ghost" href="u.html?uid=${encodeURIComponent(me.uid)}">내 페이지 열기</a><button class="ghost" data-id="${d.id}">공유 해제</button></div></div>`;
+        row.querySelector('button[data-id]').onclick=async(ev)=>{ if(!confirm('이 친구의 권한을 해제할까요?'))return; await db.collection('friends').doc(ev.target.dataset.id).delete(); loadMyFriends(); };
         box.appendChild(row);
       });
-    }catch(e){ logError(e,'loadMyFriends'); box.innerHTML = `<div class="muted">불러오기 실패: ${esc(e.message)}</div>`; }
+    }catch(e){ box.innerHTML=`<div class="muted">불러오기 실패: ${esc(e.message)}</div>`; }
   }
 
   async function loadSharedToMe(){
-    const box = $('#shared-to-me'); box.innerHTML = '<div class="muted">불러오는 중…</div>';
+    const box=$('#shared-to-me'); box.innerHTML='<div class="muted">불러오는 중…</div>';
     try{
-      const snap = await db.collection('friends')
-        .where('friendUid','==', me.uid)
-        .orderBy('createdAt','desc').get();
-      box.innerHTML = '';
-      if(snap.empty){ box.innerHTML = '<div class="muted">아직 공유받은 페이지가 없습니다.</div>'; return; }
-      snap.forEach(d=>{
-        const f = d.data();
-        const row = document.createElement('div');
-        row.className='item';
-        row.innerHTML = `
-          <div class="row" style="justify-content:space-between">
-            <div>
-              <div class="muted">ownerUid</div>
-              <div><strong>${esc(f.ownerUid)}</strong></div>
-            </div>
-            <div class="row" style="gap:8px">
-              <a class="ghost" href="u.html?uid=${encodeURIComponent(f.ownerUid)}" aria-label="페이지 열기">페이지 열기</a>
-            </div>
-          </div>`;
+      let snap; try{
+        snap=await db.collection('friends').where('friendUid','==',me.uid).orderBy('createdAt','desc').get();
+      }catch{ snap=await db.collection('friends').where('friendUid','==',me.uid).get(); }
+      box.innerHTML=''; if(snap.empty){ box.innerHTML='<div class="muted">아직 공유받은 페이지가 없습니다.</div>'; return; }
+      snap.docs.sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0)).forEach(d=>{
+        const f=d.data();
+        const row=document.createElement('div'); row.className='item';
+        row.innerHTML=`<div class="row space"><div><div class="muted">ownerUid</div><div><strong>${esc(f.ownerUid)}</strong></div></div><div class="row gap8"><a class="ghost" href="u.html?uid=${encodeURIComponent(f.ownerUid)}">페이지 열기</a></div></div>`;
         box.appendChild(row);
       });
-    }catch(e){ logError(e,'loadSharedToMe'); box.innerHTML = `<div class="muted">불러오기 실패: ${esc(e.message)}</div>`; }
+    }catch(e){ box.innerHTML=`<div class="muted">불러오기 실패: ${esc(e.message)}</div>`; }
   }
 
-  $('#btn-invite').onclick = async ()=>{
-    try{
-      const v = $('#friend-input').value;
-      await inviteFriendByEmailOrUid(v);
-      $('#friend-input').value='';
-      loadMyFriends();
-      alert('공유가 추가되었습니다.');
-    }catch(e){ logError(e,'invite'); alert(e.message); }
-  };
+  $('#btn-invite').onclick=async()=>{ try{ await inviteFriendByEmailOrUid($('#friend-input').value); $('#friend-input').value=''; loadMyFriends(); alert('공유가 추가되었습니다.'); }catch(e){ alert(e.message);} };
 
   auth.onAuthStateChanged(async u=>{
-    me = u;
+    me=u;
     if(!u){
       $('#user-line').textContent='로그인 필요';
-      $('#btn-login').style.display='';
-      $('#btn-logout').style.display='none';
-      $('#btn-my').style.display='none';
-      $('#share-box').style.display='none';
-      $('#invite-box').style.display='none';
-      $('#my-friends').innerHTML='';
-      $('#shared-to-me').innerHTML='';
+      $('#btn-login').style.display=''; $('#btn-logout').style.display='none'; $('#btn-my').style.display='none'; $('#btn-admin').style.display='none';
+      $('#share-box').style.display='none'; $('#invite-box').style.display='none'; $('#my-friends').innerHTML=''; $('#shared-to-me').innerHTML='';
       return;
     }
-    try{ isAdmin = (await db.collection('roles').doc(u.uid).get()).exists; }catch{ isAdmin=false; }
+    try{ isAdmin=(await db.collection('roles').doc(u.uid).get()).exists; }catch{ isAdmin=false; }
     await ensureUserDoc(u);
-
-    $('#user-line').textContent = `${u.displayName||'익명'} (${u.email||''})${isAdmin?' · 관리자':''}`;
-    $('#btn-login').style.display='none';
-    $('#btn-logout').style.display='';
-    $('#btn-my').style.display='';
-
-    const link = `${location.origin}${location.pathname.replace(/index\.html?$/,'')}u.html?uid=${encodeURIComponent(u.uid)}`;
-    $('#share-url').value = link;
-    $('#share-box').style.display='';
-    $('#invite-box').style.display='';
-
-    loadMyFriends();
-    loadSharedToMe();
+    $('#user-line').textContent=`${u.displayName||'익명'} (${u.email||''})${isAdmin?' · 관리자':''}`;
+    $('#btn-login').style.display='none'; $('#btn-logout').style.display=''; $('#btn-my').style.display=''; $('#btn-admin').style.display=isAdmin?'':'none';
+    const link=`${location.origin}${location.pathname.replace(/index\.html?$/,'')}u.html?uid=${encodeURIComponent(u.uid)}`; $('#share-url').value=link;
+    $('#share-box').style.display=''; $('#invite-box').style.display='';
+    loadMyFriends(); loadSharedToMe();
   });
 </script>
 </body>
