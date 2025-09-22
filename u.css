@@ -9,3 +9,21 @@
   width:160px; height:100px; object-fit:cover;
   border-radius:10px; border:1px solid #23305d;
 }
+/* 댓글 줄 스타일 */
+.comment{
+  border-left:2px solid #334388;
+  padding-left:10px;
+  margin:8px 0;
+}
+
+/* 파일 행 스타일 */
+.file-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  background:#0c142c;
+  border:1px solid #23305d;
+  border-radius:12px;
+  padding:8px 10px;
+}
