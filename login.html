@@ -163,7 +163,7 @@
     
     <div class="button-group">
       <button id="btn-login" class="btn btn-primary">로그인</button>
-      <button id="btn-signup" class="btn btn-secondary">회원가입</button>
+      <button id="btn-makeid" class="btn btn-secondary">회원가입</button>
     </div>
 
     <div class="divider">또는</div>
@@ -200,12 +200,6 @@
             case 'auth/wrong-password':
               errorDiv.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
               break;
-            case 'auth/email-already-in-use':
-              errorDiv.textContent = '이미 사용 중인 이메일입니다.';
-              break;
-            case 'auth/weak-password':
-              errorDiv.textContent = '비밀번호는 6자 이상이어야 합니다.';
-              break;
             default:
               errorDiv.textContent = '오류가 발생했습니다. 다시 시도해주세요.';
           }
@@ -222,14 +216,10 @@
       handleAuthResult(auth.signInWithEmailAndPassword(email, password));
     };
 
-    $('#btn-signup').onclick = () => {
-      const email = emailInput.value;
-      const password = passwordInput.value;
-      if (!email || !password) {
-        errorDiv.textContent = '이메일과 비밀번호를 모두 입력해주세요.';
-        return;
-      }
-      handleAuthResult(auth.createUserWithEmailAndPassword(email, password));
+    // --- 회원가입 버튼 기능 수정 ---
+    $('#btn-makeid').onclick = () => {
+      // 회원가입 페이지로 이동
+      location.href = 'makeid.html';
     };
 
     $('#btn-google-login').onclick = () => {
