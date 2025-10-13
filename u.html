@@ -142,6 +142,40 @@
   .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
   @media (max-width:860px){.grid.cols-2{grid-template-columns:1fr}}
   .manage{display:flex;gap:6px;}
+
+  /* --- 추가된 스타일: 파일 첨부 및 갤러리 뷰 --- */
+  .file-display {
+    margin-top: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .file-display img {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+  .gallery-view {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+  .gallery-view .project {
+    padding: 0;
+    overflow: hidden;
+  }
+  .gallery-view .project .project-thumbnail {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+  }
+  .gallery-view .project .project-info {
+    padding: 12px;
+  }
 </style>
 </head>
 <body>
@@ -166,7 +200,10 @@
     <form id="form-new" class="list">
       <input id="p-title" class="inp" placeholder="프로젝트 제목" required/>
       <textarea id="p-desc" class="inp" placeholder="프로젝트에 대한 상세 설명" required></textarea>
-      <input id="p-tags" class="inp" placeholder="태그 (쉼표로 구분) 예: 웹개발, React"/>
+      <div class="grid cols-2">
+        <input id="p-tags" class="inp" placeholder="태그 (쉼표로 구분)"/>
+        <input id="p-file" type="file" class="inp"/>
+      </div>
       <div class="row"><button type="submit">등록하기</button></div>
     </form>
   </section>
@@ -201,11 +238,8 @@
     location.href='index.html';
   }
 
-  let me=null;
-  let isAdmin=false;
-  let canWrite=false;
-  let ownerData = {};
-  let loadedProjects = [];
+  let me=null, isAdmin=false, canWrite=false;
+  let ownerData = {}, loadedProjects = [];
 
   async function initializePage() {
     await loadOwnerProfile();
@@ -248,13 +282,11 @@
     if(!me){ canWrite=false; return; }
     const isOwner = me.uid === ownerUid;
     let isFriend = false;
-    // 관리자 여부 확인
     try { 
       isAdmin = (await db.collection('roles').doc(me.uid).get()).exists; 
     } catch { 
       isAdmin = false; 
     }
-
     if(!isOwner && !isAdmin){
       try{
         const friendDocId = `${ownerUid}_${me.uid}`;
@@ -271,7 +303,6 @@
     const box=$('#list');
     box.innerHTML = '<div class="muted">프로젝트를 불러오는 중...</div>';
     try {
-      // --- 수정된 부분: top-level 'projects' 컬렉션을 쿼리 ---
       const projectsRef = db.collection('projects');
       const snap = await projectsRef.where('ownerUid', '==', ownerUid).orderBy('createdAt', 'desc').get();
       
@@ -288,6 +319,14 @@
   function renderProjects(list) {
     const listEl = $('#list');
     listEl.innerHTML = '';
+    
+    // 직무에 따른 뷰 클래스 적용
+    if (ownerData.jobRole && ownerData.jobRole.includes('designer')) {
+      listEl.classList.add('gallery-view');
+    } else {
+      listEl.classList.remove('gallery-view');
+    }
+
     if (!list || !list.length) {
       listEl.innerHTML = '<div class="muted">아직 등록된 프로젝트가 없습니다.</div>';
       return;
@@ -298,39 +337,67 @@
   function renderProjectCard(id, data, listEl) {
     const mine = me && (me.uid === data.authorUid);
     const allowManage = me && (mine || isAdmin);
+    const isGalleryView = listEl.classList.contains('gallery-view');
     
     const card = document.createElement('article');
     card.className = 'project';
     card.id = `project-${id}`;
     
-    let viewHtml = `
-      <div class="row space wrap">
-        <div>
-          <h3 style="margin:0">${esc(data.title)}</h3>
-          <div class="muted small" style="margin-top:2px;">${esc(data.authorName || '익명')} · ${fmt(data.createdAt)}</div>
+    // 파일 표시 HTML 생성
+    let fileHtml = '';
+    if (data.mainFile) {
+        const isImage = data.mainFile.contentType.startsWith('image/');
+        if (isGalleryView) {
+            if (isImage) {
+                fileHtml = `<img src="${esc(data.mainFile.url)}" alt="${esc(data.title)}" class="project-thumbnail">`;
+            }
+        } else {
+            fileHtml = `<div class="file-display">
+                ${isImage ? `<img src="${esc(data.mainFile.url)}" alt="thumbnail">` : '📄'}
+                <div>
+                    <a href="${esc(data.mainFile.url)}" target="_blank" rel="noopener">${esc(data.mainFile.name)}</a>
+                    <div class="muted small">${(data.mainFile.size / 1024).toFixed(1)} KB</div>
+                </div>
+            </div>`;
+        }
+    } else if (isGalleryView) {
+        fileHtml = `<div class="project-thumbnail" style="background:#f0f0f0; display:flex; align-items:center; justify-content:center; color:#ccc;">No Image</div>`;
+    }
+
+    const infoHtml = `
+      <div class="project-info">
+        <div class="row space wrap">
+          <div>
+            <h3 style="margin:0">${esc(data.title)}</h3>
+            <div class="muted small" style="margin-top:2px;">${esc(data.authorName || '익명')} · ${fmt(data.createdAt)}</div>
+          </div>
+          ${allowManage ? `<div class="manage">
+            <button class="ghost mini btn-edit">수정</button>
+            <button class="danger mini btn-del">삭제</button>
+          </div>` : ''}
         </div>
-        ${allowManage ? `<div class="manage">
-          <button class="ghost mini btn-edit">수정</button>
-          <button class="danger mini btn-del">삭제</button>
-        </div>` : ''}
+        <p style="margin:8px 0 0; white-space: pre-wrap; display:${isGalleryView ? 'none' : 'block'};">${esc(data.desc)}</p>
+        ${(data.tags && data.tags.length) ? `<div class="row wrap" style="gap:6px;margin-top:8px">${data.tags.map(t => `<span class="chip">#${esc(t)}</span>`).join('')}</div>` : ''}
       </div>
-      <p style="margin:8px 0 0; white-space: pre-wrap;">${esc(data.desc)}</p>
-      ${(data.tags && data.tags.length) ? `<div class="row wrap" style="gap:6px;margin-top:8px">${data.tags.map(t => `<span class="chip">#${esc(t)}</span>`).join('')}</div>` : ''}
     `;
 
+    card.innerHTML = fileHtml + infoHtml;
+
     let editHtml = `
-      <form class="list edit-form">
+      <form class="list edit-form" style="padding:16px;">
         <input class="inp" value="${esc(data.title)}" required>
         <textarea class="inp" required>${esc(data.desc)}</textarea>
         <input class="inp" value="${(data.tags || []).join(', ')}">
+        <div class="muted small">현재 파일: ${data.mainFile ? esc(data.mainFile.name) : '없음'}</div>
+        <input type="file" class="inp file-input">
         <div class="row gap8">
             <button type="submit">저장</button>
             <button type="button" class="ghost btn-cancel-edit">취소</button>
+            ${data.mainFile ? '<button type="button" class="danger mini btn-del-file">파일 삭제</button>' : ''}
         </div>
       </form>
     `;
 
-    card.innerHTML = viewHtml;
     listEl.appendChild(card);
 
     if (allowManage) {
@@ -341,46 +408,70 @@
         card.innerHTML = editHtml;
         const form = card.querySelector('.edit-form');
         const btnCancel = card.querySelector('.btn-cancel-edit');
+        const btnDelFile = card.querySelector('.btn-del-file');
 
-        btnCancel.onclick = () => {
-          card.innerHTML = viewHtml;
-          card.querySelector('.btn-edit').onclick = btnEdit.onclick;
-          card.querySelector('.btn-del').onclick = btnDel.onclick;
-        };
+        btnCancel.onclick = () => loadProjects(); // 간단하게 새로고침
+
+        if(btnDelFile) {
+            btnDelFile.onclick = async () => {
+                if (!confirm('첨부파일을 삭제하시겠습니까?')) return;
+                try {
+                    const projectRef = db.collection('projects').doc(id);
+                    if(data.mainFile.storagePath) {
+                        await storage.ref(data.mainFile.storagePath).delete();
+                    }
+                    await projectRef.update({ mainFile: null });
+                    await loadProjects();
+                } catch(err) { alert('파일 삭제 실패: '+err.message); }
+            };
+        }
 
         form.onsubmit = async (e) => {
           e.preventDefault();
           const newTitle = form.children[0].value.trim();
           const newDesc = form.children[1].value.trim();
           const newTags = parseTags(form.children[2].value);
+          const newFile = card.querySelector('.file-input').files[0];
 
           if (!newTitle || !newDesc) return alert('제목과 설명을 입력하세요.');
 
           try {
-            // --- 수정된 부분: top-level 'projects' 컬렉션의 문서를 직접 업데이트 ---
             const projectRef = db.collection('projects').doc(id);
-            await projectRef.update({
-              title: newTitle,
-              desc: newDesc,
-              tags: newTags,
+            const updateData = {
+              title: newTitle, desc: newDesc, tags: newTags,
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            };
+
+            if (newFile) { // 새 파일이 있으면 업로드
+              if (newFile.size > 10 * 1024 * 1024) throw new Error('10MB 이하 파일만 업로드 가능합니다.');
+              // 기존 파일 삭제
+              if (data.mainFile && data.mainFile.storagePath) {
+                await storage.ref(data.mainFile.storagePath).delete().catch(e => console.warn("Old file deletion failed:", e));
+              }
+              const storagePath = `uploads/${ownerUid}/${id}/${Date.now()}_${newFile.name}`;
+              const fileRef = storage.ref(storagePath);
+              const snap = await fileRef.put(newFile);
+              const url = await snap.ref.getDownloadURL();
+              updateData.mainFile = {
+                  name: newFile.name, size: newFile.size, contentType: newFile.type,
+                  url, storagePath
+              };
+            }
+            await projectRef.update(updateData);
             await loadProjects();
-          } catch (err) {
-            alert('수정 실패: ' + err.message);
-          }
+          } catch (err) { alert('수정 실패: ' + err.message); }
         };
       };
 
       btnDel.onclick = async () => {
         if (!confirm('정말로 이 프로젝트를 삭제하시겠습니까?')) return;
         try {
-          // --- 수정된 부분: top-level 'projects' 컬렉션의 문서를 직접 삭제 ---
+          if (data.mainFile && data.mainFile.storagePath) {
+            await storage.ref(data.mainFile.storagePath).delete().catch(e => console.warn("File deletion failed:", e));
+          }
           await db.collection('projects').doc(id).delete();
           await loadProjects();
-        } catch (err) {
-          alert('삭제 실패: ' + err.message);
-        }
+        } catch (err) { alert('삭제 실패: ' + err.message); }
       };
     }
   }
@@ -398,23 +489,36 @@
     const title = $('#p-title').value.trim();
     const desc = $('#p-desc').value.trim();
     const tags = parseTags($('#p-tags').value);
+    const file = $('#p-file').files[0];
 
     if (!title || !desc) return alert('제목과 설명은 필수입니다.');
 
     try {
-      // --- 수정된 부분: top-level 'projects' 컬렉션에 새 문서 추가 ---
       const projectsRef = db.collection('projects');
-      await projectsRef.add({
+      const docRef = await projectsRef.add({
         ownerUid: ownerUid,
         authorUid: me.uid,
         authorName: me.displayName || '익명',
-        title: title,
-        desc: desc,
-        tags: tags,
+        title, desc, tags,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         mainFile: null
       });
+
+      if (file) {
+        if (file.size > 10 * 1024 * 1024) throw new Error('10MB 이하 파일만 업로드 가능합니다.');
+        const storagePath = `uploads/${ownerUid}/${docRef.id}/${Date.now()}_${file.name}`;
+        const fileRef = storage.ref(storagePath);
+        const snap = await fileRef.put(file);
+        const url = await snap.ref.getDownloadURL();
+        await docRef.update({
+          mainFile: {
+            name: file.name, size: file.size, contentType: file.type,
+            url, storagePath
+          }
+        });
+      }
+
       e.target.reset();
       await loadProjects();
     } catch (err) {
