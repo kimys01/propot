@@ -143,7 +143,7 @@
   @media (max-width:860px){.grid.cols-2{grid-template-columns:1fr}}
   .manage{display:flex;gap:6px;}
 
-  /* --- 추가된 스타일: 파일 첨부 및 갤러리 뷰 --- */
+  /* --- 추가된 스타일: 파일 첨부, 갤러리 뷰, 댓글 --- */
   .file-display {
     margin-top: 10px;
     background-color: #f9f9f9;
@@ -175,6 +175,21 @@
   }
   .gallery-view .project .project-info {
     padding: 12px;
+  }
+  .comments-section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 16px;
+    margin-top: 16px;
+  }
+  .comment-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .comment-item:last-child {
+    border-bottom: none;
+  }
+  .comment-item p {
+    margin: 4px 0 0;
   }
 </style>
 </head>
@@ -320,7 +335,6 @@
     const listEl = $('#list');
     listEl.innerHTML = '';
     
-    // 직무에 따른 뷰 클래스 적용
     if (ownerData.jobRole && ownerData.jobRole.includes('designer')) {
       listEl.classList.add('gallery-view');
     } else {
@@ -343,7 +357,6 @@
     card.className = 'project';
     card.id = `project-${id}`;
     
-    // 파일 표시 HTML 생성
     let fileHtml = '';
     if (data.mainFile) {
         const isImage = data.mainFile.contentType.startsWith('image/');
@@ -381,7 +394,18 @@
       </div>
     `;
 
-    card.innerHTML = fileHtml + infoHtml;
+    // --- 댓글 섹션 HTML 추가 ---
+    const commentsHtml = `
+      <div class="comments-section">
+          <h4 style="margin:0 0 8px 0; font-size: 16px;">댓글</h4>
+          <div class="list" id="comments-${id}"></div>
+          ${me ? `<form class="list mt10" id="form-comment-${id}">
+              <textarea class="inp" placeholder="댓글을 입력하세요..." required style="min-height: 60px;"></textarea>
+              <div class="row"><button type="submit" class="secondary mini">등록</button></div>
+          </form>` : '<p class="muted small mt10">댓글을 작성하려면 로그인이 필요합니다.</p>'}
+      </div>`;
+
+    card.innerHTML = fileHtml + infoHtml + commentsHtml;
 
     let editHtml = `
       <form class="list edit-form" style="padding:16px;">
@@ -400,6 +424,15 @@
 
     listEl.appendChild(card);
 
+    // 댓글 기능 초기화
+    if(me) {
+      const commentForm = card.querySelector(`#form-comment-${id}`);
+      if(commentForm) {
+          commentForm.addEventListener('submit', (e) => addComment(e, id));
+      }
+    }
+    loadComments(id);
+
     if (allowManage) {
       const btnEdit = card.querySelector('.btn-edit');
       const btnDel = card.querySelector('.btn-del');
@@ -410,7 +443,7 @@
         const btnCancel = card.querySelector('.btn-cancel-edit');
         const btnDelFile = card.querySelector('.btn-del-file');
 
-        btnCancel.onclick = () => loadProjects(); // 간단하게 새로고침
+        btnCancel.onclick = () => loadProjects();
 
         if(btnDelFile) {
             btnDelFile.onclick = async () => {
@@ -442,9 +475,8 @@
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            if (newFile) { // 새 파일이 있으면 업로드
+            if (newFile) {
               if (newFile.size > 10 * 1024 * 1024) throw new Error('10MB 이하 파일만 업로드 가능합니다.');
-              // 기존 파일 삭제
               if (data.mainFile && data.mainFile.storagePath) {
                 await storage.ref(data.mainFile.storagePath).delete().catch(e => console.warn("Old file deletion failed:", e));
               }
@@ -473,6 +505,77 @@
           await loadProjects();
         } catch (err) { alert('삭제 실패: ' + err.message); }
       };
+    }
+  }
+
+  // --- 댓글 관련 함수들 ---
+  async function loadComments(projectId) {
+    const box = $(`#project-${projectId} #comments-${projectId}`);
+    if (!box) return;
+    box.innerHTML = '<div class="muted small">댓글 불러오는 중...</div>';
+    try {
+      const commentsRef = db.collection('projects').doc(projectId).collection('comments');
+      const snap = await commentsRef.orderBy('createdAt', 'asc').get();
+
+      if (snap.empty) {
+        box.innerHTML = '<div class="muted small">아직 댓글이 없습니다.</div>';
+        return;
+      }
+      box.innerHTML = '';
+      snap.forEach(doc => {
+        const commentId = doc.id;
+        const data = doc.data();
+        const canDelete = me && (me.uid === data.authorUid || me.uid === ownerUid || isAdmin);
+        const commentEl = document.createElement('div');
+        commentEl.className = 'comment-item';
+        commentEl.innerHTML = `
+          <div class="row space">
+            <div class="muted small"><strong>${esc(data.authorName || '익명')}</strong> · ${fmt(data.createdAt)}</div>
+            ${canDelete ? `<button class="danger mini btn-del-comment" data-comment-id="${commentId}">삭제</button>` : ''}
+          </div>
+          <p style="margin: 4px 0 0;">${esc(data.text)}</p>
+        `;
+        box.appendChild(commentEl);
+
+        if (canDelete) {
+          commentEl.querySelector('.btn-del-comment').onclick = async () => {
+            if (confirm('이 댓글을 삭제하시겠습니까?')) {
+              try {
+                await db.collection('projects').doc(projectId).collection('comments').doc(commentId).delete();
+                loadComments(projectId);
+              } catch (err) { alert('댓글 삭제 실패: ' + err.message); }
+            }
+          };
+        }
+      });
+    } catch (e) {
+      console.error("Comments load failed:", e);
+      box.innerHTML = `<div class="muted small">댓글을 불러오는 데 실패했습니다.</div>`;
+    }
+  }
+
+  async function addComment(event, projectId) {
+    event.preventDefault();
+    if (!me) {
+      alert('댓글을 작성하려면 로그인이 필요합니다.');
+      return;
+    }
+    const form = $(`#form-comment-${projectId}`);
+    const textarea = form.querySelector('textarea');
+    const text = textarea.value.trim();
+    if (!text) return;
+
+    try {
+      await db.collection('projects').doc(projectId).collection('comments').add({
+        authorUid: me.uid,
+        authorName: me.displayName || '익명',
+        text: text,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      textarea.value = '';
+      loadComments(projectId);
+    } catch (err) {
+      alert('댓글 등록 실패: ' + err.message);
     }
   }
 
