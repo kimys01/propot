@@ -248,6 +248,13 @@
     if(!me){ canWrite=false; return; }
     const isOwner = me.uid === ownerUid;
     let isFriend = false;
+    // 관리자 여부 확인
+    try { 
+      isAdmin = (await db.collection('roles').doc(me.uid).get()).exists; 
+    } catch { 
+      isAdmin = false; 
+    }
+
     if(!isOwner && !isAdmin){
       try{
         const friendDocId = `${ownerUid}_${me.uid}`;
@@ -264,8 +271,9 @@
     const box=$('#list');
     box.innerHTML = '<div class="muted">프로젝트를 불러오는 중...</div>';
     try {
-      const projectsRef = db.collection('projects').doc(ownerUid).collection('user_projects');
-      const snap = await projectsRef.orderBy('createdAt', 'desc').get();
+      // --- 수정된 부분: top-level 'projects' 컬렉션을 쿼리 ---
+      const projectsRef = db.collection('projects');
+      const snap = await projectsRef.where('ownerUid', '==', ownerUid).orderBy('createdAt', 'desc').get();
       
       loadedProjects = [];
       snap.forEach(doc => loadedProjects.push({ id: doc.id, data: doc.data() }));
@@ -295,7 +303,6 @@
     card.className = 'project';
     card.id = `project-${id}`;
     
-    // 기본 보기 모드 HTML
     let viewHtml = `
       <div class="row space wrap">
         <div>
@@ -311,7 +318,6 @@
       ${(data.tags && data.tags.length) ? `<div class="row wrap" style="gap:6px;margin-top:8px">${data.tags.map(t => `<span class="chip">#${esc(t)}</span>`).join('')}</div>` : ''}
     `;
 
-    // 수정 모드 HTML
     let editHtml = `
       <form class="list edit-form">
         <input class="inp" value="${esc(data.title)}" required>
@@ -338,7 +344,6 @@
 
         btnCancel.onclick = () => {
           card.innerHTML = viewHtml;
-          // 이벤트 리스너 다시 연결
           card.querySelector('.btn-edit').onclick = btnEdit.onclick;
           card.querySelector('.btn-del').onclick = btnDel.onclick;
         };
@@ -352,14 +357,15 @@
           if (!newTitle || !newDesc) return alert('제목과 설명을 입력하세요.');
 
           try {
-            const projectRef = db.collection('projects').doc(ownerUid).collection('user_projects').doc(id);
+            // --- 수정된 부분: top-level 'projects' 컬렉션의 문서를 직접 업데이트 ---
+            const projectRef = db.collection('projects').doc(id);
             await projectRef.update({
               title: newTitle,
               desc: newDesc,
               tags: newTags,
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            await loadProjects(); // 목록 새로고침
+            await loadProjects();
           } catch (err) {
             alert('수정 실패: ' + err.message);
           }
@@ -369,8 +375,9 @@
       btnDel.onclick = async () => {
         if (!confirm('정말로 이 프로젝트를 삭제하시겠습니까?')) return;
         try {
-          await db.collection('projects').doc(ownerUid).collection('user_projects').doc(id).delete();
-          await loadProjects(); // 목록 새로고침
+          // --- 수정된 부분: top-level 'projects' 컬렉션의 문서를 직접 삭제 ---
+          await db.collection('projects').doc(id).delete();
+          await loadProjects();
         } catch (err) {
           alert('삭제 실패: ' + err.message);
         }
@@ -378,14 +385,12 @@
     }
   }
 
-  // --- UI 이벤트 리스너 설정 ---
   $('#btn-login').onclick=()=>location.href=`login.html`;
   $('#btn-logout').onclick=()=>auth.signOut();
   
   const shareUrl=`${location.origin}${location.pathname.replace('u.html', '')}u.html?uid=${encodeURIComponent(ownerUid)}`;
   $('#btn-copy').onclick=async()=>{ try { await navigator.clipboard.writeText(shareUrl); alert('공유 링크가 복사되었습니다.'); } catch(e) { alert('복사에 실패했습니다.'); } };
 
-  // 새 프로젝트 작성 폼 제출
   $('#form-new').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!canWrite) return alert('작성 권한이 없습니다.');
@@ -397,7 +402,8 @@
     if (!title || !desc) return alert('제목과 설명은 필수입니다.');
 
     try {
-      const projectsRef = db.collection('projects').doc(ownerUid).collection('user_projects');
+      // --- 수정된 부분: top-level 'projects' 컬렉션에 새 문서 추가 ---
+      const projectsRef = db.collection('projects');
       await projectsRef.add({
         ownerUid: ownerUid,
         authorUid: me.uid,
@@ -416,7 +422,6 @@
     }
   });
 
-  // 페이지 초기화 함수 실행
   initializePage();
 </script>
 </body>
