@@ -55,6 +55,12 @@
     box-shadow: 0 4px 20px rgba(0,0,0,0.07);
   }
   .list{display:grid;gap:12px}
+  .project {
+    background: var(--container-bg-color);
+    border:1px solid var(--border-color);
+    border-radius:12px;
+    padding:16px;
+  }
   .chip{
     font-size:12px;
     padding:2px 8px;
@@ -70,7 +76,7 @@
     font-size: 22px;
   }
   button,input,textarea,a.secondary,a.ghost{font:inherit}
-  textarea{min-height:120px;resize:vertical}
+  textarea{min-height:80px;resize:vertical}
   button, a.secondary, a.ghost {
     padding:9px 14px;
     border:none;
@@ -109,6 +115,15 @@
     color: var(--primary-color);
     border-color: var(--primary-color);
   }
+   button.danger {
+    background-color: var(--danger-bg-color);
+    color: var(--danger-text-color);
+    border: 1px solid var(--danger-border-color);
+  }
+  button.danger:hover {
+    background-color: #fecaca;
+  }
+  .mini{padding:6px 10px;border-radius:8px;font-size:12px}
   .inp{
     width:100%;
     background:#ffffff;
@@ -123,6 +138,10 @@
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2);
   }
+  .grid{display:grid;gap:12px}
+  .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  @media (max-width:860px){.grid.cols-2{grid-template-columns:1fr}}
+  .manage{display:flex;gap:6px;}
 </style>
 </head>
 <body>
@@ -141,29 +160,22 @@
 
 <main class="wrap pad16">
   
-  <section id="project-section" class="card">
-    <!-- 프로젝트 보기 모드 -->
-    <div id="project-view">
-      <div class="row space wrap">
-          <h2 id="p-view-title" class="ttl">프로젝트를 불러오는 중...</h2>
-          <button id="btn-edit" class="ghost" style="display:none;">수정</button>
-      </div>
-      <p id="p-view-desc" class="muted">잠시만 기다려주세요.</p>
-      <div id="p-view-tags" class="row wrap" style="gap:6px; margin-top:8px;"></div>
-      <div id="p-view-file" class="mt14"></div>
-    </div>
-
-    <!-- 프로젝트 수정 모드 (기본 숨김) -->
-    <form id="project-edit-form" class="list" style="display:none;">
-      <h2 class="ttl">프로젝트 수정</h2>
-      <input id="p-edit-title" class="inp" placeholder="프로젝트 제목" required/>
-      <textarea id="p-edit-desc" class="inp" placeholder="프로젝트에 대한 상세 설명" required></textarea>
-      <input id="p-edit-tags" class="inp" placeholder="태그 (쉼표로 구분)"/>
-      <div class="row gap8">
-          <button type="submit">저장하기</button>
-          <button type="button" id="btn-cancel-edit" class="ghost">취소</button>
-      </div>
+  <section id="write-section" class="card" style="display:none;">
+    <h2 class="ttl">프로젝트 작성</h2>
+    <p id="write-hint" class="muted"></p>
+    <form id="form-new" class="list">
+      <input id="p-title" class="inp" placeholder="프로젝트 제목" required/>
+      <textarea id="p-desc" class="inp" placeholder="프로젝트에 대한 상세 설명" required></textarea>
+      <input id="p-tags" class="inp" placeholder="태그 (쉼표로 구분) 예: 웹개발, React"/>
+      <div class="row"><button type="submit">등록하기</button></div>
     </form>
+  </section>
+
+  <section class="card mt14">
+    <div class="row space wrap">
+      <h2 class="ttl">프로젝트 목록</h2>
+    </div>
+    <div id="list" class="list mt10"></div>
   </section>
 
 </main>
@@ -180,6 +192,7 @@
   const $=s=>document.querySelector(s);
   const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const parseTags=v=>String(v||'').split(/[, \t]+/).map(x=>x.trim().replace(/^#/,'').toLowerCase()).filter(Boolean).slice(0,10);
+  const fmt=ts=>{ if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleString(); };
 
   const params=new URLSearchParams(location.search);
   const ownerUid=params.get('uid');
@@ -192,6 +205,7 @@
   let isAdmin=false;
   let canWrite=false;
   let ownerData = {};
+  let loadedProjects = [];
 
   async function initializePage() {
     await loadOwnerProfile();
@@ -199,7 +213,7 @@
       me = user;
       updateHeaderUI();
       await computePermission();
-      await loadAndRenderProject();
+      await loadProjects();
     });
   }
 
@@ -242,35 +256,125 @@
       }catch(e){ console.warn('친구 관계 확인 중 오류:', e); }
     }
     canWrite = isOwner || isFriend || isAdmin;
-    $('#btn-edit').style.display = canWrite ? '' : 'none';
+    $('#write-section').style.display = canWrite ? 'block' : 'none';
+    $('#write-hint').textContent = canWrite ? '새로운 프로젝트를 등록하여 포트폴리오를 채워보세요.' : '이 포트폴리오의 소유자 또는 공유받은 친구만 작성할 수 있습니다.';
   }
   
-  // --- 프로젝트 데이터 로드 및 렌더링 함수 ---
-  async function loadAndRenderProject() {
+  async function loadProjects() {
+    const box=$('#list');
+    box.innerHTML = '<div class="muted">프로젝트를 불러오는 중...</div>';
     try {
-      const projectRef = db.collection('projects').doc(ownerUid);
-      const doc = await projectRef.get();
+      const projectsRef = db.collection('projects').doc(ownerUid).collection('user_projects');
+      const snap = await projectsRef.orderBy('createdAt', 'desc').get();
+      
+      loadedProjects = [];
+      snap.forEach(doc => loadedProjects.push({ id: doc.id, data: doc.data() }));
 
-      if (doc.exists) {
-        const data = doc.data();
-        // 보기 모드 UI 업데이트
-        $('#p-view-title').textContent = data.title;
-        $('#p-view-desc').textContent = data.desc;
-        $('#p-view-tags').innerHTML = (data.tags || []).map(t => `<span class="chip">#${esc(t)}</span>`).join('');
-        
-        // 수정 폼에 데이터 채우기
-        $('#p-edit-title').value = data.title;
-        $('#p-edit-desc').value = data.desc;
-        $('#p-edit-tags').value = (data.tags || []).join(', ');
-
-      } else {
-        $('#p-view-title').textContent = '프로젝트가 없습니다.';
-        $('#p-view-desc').textContent = '아직 작성된 프로젝트가 없습니다.';
-      }
+      renderProjects(loadedProjects);
     } catch (e) {
-      console.error("Project load failed:", e);
-      $('#p-view-title').textContent = '프로젝트 로딩 실패';
-      $('#p-view-desc').textContent = '데이터를 불러오는 중 오류가 발생했습니다.';
+      console.error("Projects load failed:", e);
+      box.innerHTML = `<div class="muted">프로젝트를 불러오는 데 실패했습니다: ${esc(e.message)}</div>`;
+    }
+  }
+
+  function renderProjects(list) {
+    const listEl = $('#list');
+    listEl.innerHTML = '';
+    if (!list || !list.length) {
+      listEl.innerHTML = '<div class="muted">아직 등록된 프로젝트가 없습니다.</div>';
+      return;
+    }
+    list.forEach(({ id, data }) => renderProjectCard(id, data, listEl));
+  }
+
+  function renderProjectCard(id, data, listEl) {
+    const mine = me && (me.uid === data.authorUid);
+    const allowManage = me && (mine || isAdmin);
+    
+    const card = document.createElement('article');
+    card.className = 'project';
+    card.id = `project-${id}`;
+    
+    // 기본 보기 모드 HTML
+    let viewHtml = `
+      <div class="row space wrap">
+        <div>
+          <h3 style="margin:0">${esc(data.title)}</h3>
+          <div class="muted small" style="margin-top:2px;">${esc(data.authorName || '익명')} · ${fmt(data.createdAt)}</div>
+        </div>
+        ${allowManage ? `<div class="manage">
+          <button class="ghost mini btn-edit">수정</button>
+          <button class="danger mini btn-del">삭제</button>
+        </div>` : ''}
+      </div>
+      <p style="margin:8px 0 0; white-space: pre-wrap;">${esc(data.desc)}</p>
+      ${(data.tags && data.tags.length) ? `<div class="row wrap" style="gap:6px;margin-top:8px">${data.tags.map(t => `<span class="chip">#${esc(t)}</span>`).join('')}</div>` : ''}
+    `;
+
+    // 수정 모드 HTML
+    let editHtml = `
+      <form class="list edit-form">
+        <input class="inp" value="${esc(data.title)}" required>
+        <textarea class="inp" required>${esc(data.desc)}</textarea>
+        <input class="inp" value="${(data.tags || []).join(', ')}">
+        <div class="row gap8">
+            <button type="submit">저장</button>
+            <button type="button" class="ghost btn-cancel-edit">취소</button>
+        </div>
+      </form>
+    `;
+
+    card.innerHTML = viewHtml;
+    listEl.appendChild(card);
+
+    if (allowManage) {
+      const btnEdit = card.querySelector('.btn-edit');
+      const btnDel = card.querySelector('.btn-del');
+
+      btnEdit.onclick = () => {
+        card.innerHTML = editHtml;
+        const form = card.querySelector('.edit-form');
+        const btnCancel = card.querySelector('.btn-cancel-edit');
+
+        btnCancel.onclick = () => {
+          card.innerHTML = viewHtml;
+          // 이벤트 리스너 다시 연결
+          card.querySelector('.btn-edit').onclick = btnEdit.onclick;
+          card.querySelector('.btn-del').onclick = btnDel.onclick;
+        };
+
+        form.onsubmit = async (e) => {
+          e.preventDefault();
+          const newTitle = form.children[0].value.trim();
+          const newDesc = form.children[1].value.trim();
+          const newTags = parseTags(form.children[2].value);
+
+          if (!newTitle || !newDesc) return alert('제목과 설명을 입력하세요.');
+
+          try {
+            const projectRef = db.collection('projects').doc(ownerUid).collection('user_projects').doc(id);
+            await projectRef.update({
+              title: newTitle,
+              desc: newDesc,
+              tags: newTags,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await loadProjects(); // 목록 새로고침
+          } catch (err) {
+            alert('수정 실패: ' + err.message);
+          }
+        };
+      };
+
+      btnDel.onclick = async () => {
+        if (!confirm('정말로 이 프로젝트를 삭제하시겠습니까?')) return;
+        try {
+          await db.collection('projects').doc(ownerUid).collection('user_projects').doc(id).delete();
+          await loadProjects(); // 목록 새로고침
+        } catch (err) {
+          alert('삭제 실패: ' + err.message);
+        }
+      };
     }
   }
 
@@ -281,46 +385,34 @@
   const shareUrl=`${location.origin}${location.pathname.replace('u.html', '')}u.html?uid=${encodeURIComponent(ownerUid)}`;
   $('#btn-copy').onclick=async()=>{ try { await navigator.clipboard.writeText(shareUrl); alert('공유 링크가 복사되었습니다.'); } catch(e) { alert('복사에 실패했습니다.'); } };
 
-  // 수정 버튼 클릭 시
-  $('#btn-edit').onclick = () => {
-    $('#project-view').style.display = 'none';
-    $('#project-edit-form').style.display = 'grid';
-  };
-
-  // 수정 취소 버튼 클릭 시
-  $('#btn-cancel-edit').onclick = () => {
-    $('#project-view').style.display = 'block';
-    $('#project-edit-form').style.display = 'none';
-  };
-  
-  // 수정 폼 제출 시
-  $('#project-edit-form').addEventListener('submit', async (e) => {
+  // 새 프로젝트 작성 폼 제출
+  $('#form-new').addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!canWrite) return alert('수정 권한이 없습니다.');
-    
-    const title = $('#p-edit-title').value.trim();
-    const desc = $('#p-edit-desc').value.trim();
-    const tags = parseTags($('#p-edit-tags').value);
+    if (!canWrite) return alert('작성 권한이 없습니다.');
 
-    if (!title || !desc) {
-      return alert('제목과 설명은 필수입니다.');
-    }
+    const title = $('#p-title').value.trim();
+    const desc = $('#p-desc').value.trim();
+    const tags = parseTags($('#p-tags').value);
+
+    if (!title || !desc) return alert('제목과 설명은 필수입니다.');
 
     try {
-      const projectRef = db.collection('projects').doc(ownerUid);
-      await projectRef.update({
-        title,
-        desc,
-        tags,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      const projectsRef = db.collection('projects').doc(ownerUid).collection('user_projects');
+      await projectsRef.add({
+        ownerUid: ownerUid,
+        authorUid: me.uid,
+        authorName: me.displayName || '익명',
+        title: title,
+        desc: desc,
+        tags: tags,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        mainFile: null
       });
-      alert('프로젝트가 성공적으로 수정되었습니다.');
-      $('#project-view').style.display = 'block';
-      $('#project-edit-form').style.display = 'none';
-      await loadAndRenderProject(); // 수정된 내용 다시 불러오기
-    } catch (e) {
-      console.error("Project update failed:", e);
-      alert('프로젝트 수정 중 오류가 발생했습니다.');
+      e.target.reset();
+      await loadProjects();
+    } catch (err) {
+      alert('프로젝트 등록 실패: ' + err.message);
     }
   });
 
