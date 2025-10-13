@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Propot 로그인</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary-color: #6a5acd;
+    --button-hover-color: #5a4ab9;
+    --background-color: #f0f2f5;
+    --container-bg-color: #ffffff;
+    --text-color: #333;
+    --text-muted-color: #666;
+    --border-color: #e0e0e0;
+    --error-color: #d93025;
+  }
+  body {
+    margin: 0;
+    background: var(--background-color);
+    color: var(--text-color);
+    font-family: 'Noto Sans KR', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  .login-container {
+    background: var(--container-bg-color);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+  }
+  .logo {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+  }
+  p {
+    color: var(--text-muted-color);
+    margin-bottom: 30px;
+  }
+  .input-field {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: all 0.2s;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2);
+  }
+  .button-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+  }
+  .btn-primary:hover {
+    background-color: var(--button-hover-color);
+  }
+  .btn-secondary {
+    background-color: #f0f0f0;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+  }
+  .btn-secondary:hover {
+    background-color: #e5e5e5;
+  }
+  .divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-muted-color);
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .divider:not(:empty)::before {
+    margin-right: .25em;
+  }
+  .divider:not(:empty)::after {
+    margin-left: .25em;
+  }
+  .google-login-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px;
+    background-color: #fff;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .google-login-btn:hover {
+    background-color: #f7f7f7;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .google-login-btn svg {
+    margin-right: 12px;
+  }
+  .error-message {
+    color: var(--error-color);
+    font-size: 14px;
+    margin-bottom: 15px;
+    height: 20px; /* 에러 메시지 공간 확보 */
+  }
+  .back-link {
+    margin-top: 20px;
+    display: block;
+    color: var(--text-muted-color);
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .back-link:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo">📁 Propot</div>
+    <p>포트폴리오 허브에 오신 것을 환영합니다.</p>
+
+    <div id="error-message" class="error-message"></div>
+
+    <input type="email" id="email" class="input-field" placeholder="이메일" required />
+    <input type="password" id="password" class="input-field" placeholder="비밀번호" required />
+    
+    <div class="button-group">
+      <button id="btn-login" class="btn btn-primary">로그인</button>
+      <button id="btn-signup" class="btn btn-secondary">회원가입</button>
+    </div>
+
+    <div class="divider">또는</div>
+    
+    <button id="btn-google-login" class="google-login-btn">
+      <svg width="20" height="20" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.20455C17.64 8.56636 17.5827 7.95273 17.4764 7.36364H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.20455Z" fill="#4285F4"></path><path d="M9 18C11.43 18 13.4673 17.1941 14.9564 15.8195L12.0477 13.5614C11.2418 14.1014 10.2109 14.4205 9 14.4205C6.65591 14.4205 4.67182 12.8373 3.96409 10.71H0.957272V13.0418C2.43818 15.9832 5.48182 18 9 18Z" fill="#34A853"></path><path d="M3.96409 10.71C3.78409 10.17 3.68182 9.59318 3.68182 9C3.68182 8.40682 3.78409 7.83 3.96409 7.29H0.957272V9.62182C0.347727 7.56 0.347727 5.34 0.957272 3.28818V0.956364H3.96409C4.67182 3.08 6.65591 4.66273 9 4.66273C10.2109 4.66273 11.2418 5.00364 12.0836 5.78364L15.0218 2.84545C13.4673 1.37682 11.43 0.572727 9 0.572727C5.48182 0.572727 2.43818 2.60955 0.957272 5.55091" fill="#FBBC05"></path><path d="M9 4.66273C10.79 4.66273 12.2182 5.24182 12.7873 5.76L15.0218 2.84545C13.4673 1.37682 11.43 0.572727 9 0.572727C5.48182 0.572727 2.43818 2.60955 0.957272 5.55091V9.62182C0.347727 7.56 0.347727 5.34 0.957272 3.28818" fill="#EA4335"></path></svg>
+      <span>Google 계정으로 계속하기</span>
+    </button>
+    <a href="index.html" class="back-link">메인 페이지로 돌아가기</a>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script>
+    const firebaseConfig={apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",authDomain:"propot-cc6bf.firebaseapp.com",projectId:"propot-cc6bf",appId:"1:30940698980:web:1729f30e68d3beb24ac271"};
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    const $ = s => document.querySelector(s);
+    const emailInput = $('#email');
+    const passwordInput = $('#password');
+    const errorDiv = $('#error-message');
+
+    const handleAuthResult = (promise) => {
+      errorDiv.textContent = '';
+      promise
+        .then(userCredential => {
+          location.href = 'index.html';
+        })
+        .catch(error => {
+          console.error("Authentication failed:", error);
+          switch (error.code) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+              errorDiv.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
+              break;
+            case 'auth/email-already-in-use':
+              errorDiv.textContent = '이미 사용 중인 이메일입니다.';
+              break;
+            case 'auth/weak-password':
+              errorDiv.textContent = '비밀번호는 6자 이상이어야 합니다.';
+              break;
+            default:
+              errorDiv.textContent = '오류가 발생했습니다. 다시 시도해주세요.';
+          }
+        });
+    };
+
+    $('#btn-login').onclick = () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      if (!email || !password) {
+        errorDiv.textContent = '이메일과 비밀번호를 모두 입력해주세요.';
+        return;
+      }
+      handleAuthResult(auth.signInWithEmailAndPassword(email, password));
+    };
+
+    $('#btn-signup').onclick = () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      if (!email || !password) {
+        errorDiv.textContent = '이메일과 비밀번호를 모두 입력해주세요.';
+        return;
+      }
+      handleAuthResult(auth.createUserWithEmailAndPassword(email, password));
+    };
+
+    $('#btn-google-login').onclick = () => {
+      handleAuthResult(auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()));
+    };
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        // 사용자가 이 페이지에 머무르는 것을 방지하기 위해 로그인 시 즉시 리디렉션
+        if (location.pathname.endsWith('login.html')) {
+            location.href = 'index.html';
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+
