@@ -233,8 +233,15 @@
       data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
       data.jobRole = []; // 기본값으로 빈 배열 추가
       
-      // --- 추가된 부분: 첫 프로젝트 자동 생성 ---
-      await db.collection('projects').add({
+      // --- 수정된 부분: 첫 프로젝트를 사용자 UID 문서 하위에 생성 ---
+      // 1. projects 컬렉션에 사용자 UID로 된 대표 문서를 만듭니다. (메타데이터 저장용)
+      await db.collection('projects').doc(u.uid).set({
+          ownerName: u.displayName || '익명',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      // 2. 해당 문서 아래의 'user_projects'라는 하위 컬렉션에 샘플 프로젝트를 추가합니다.
+      await db.collection('projects').doc(u.uid).collection('user_projects').add({
           ownerUid: u.uid,
           authorUid: u.uid,
           authorName: u.displayName || '익명',
@@ -316,7 +323,10 @@
     if(!u){
       $('#user-line').textContent='로그인 필요';
       $('#btn-login').style.display=''; $('#btn-logout').style.display='none'; $('#btn-my').style.display='none'; $('#btn-admin').style.display='none';
-      $('#share-box').style.display='none'; $('#invite-box').style.display='none'; $('#my-friends').innerHTML=''; $('#shared-to-me').innerHTML='';
+      $('#share-box').style.display='none';
+      $('#invite-box').style.display='none';
+      $('#my-friends').innerHTML='';
+      $('#shared-to-me').innerHTML='';
       return;
     }
 
@@ -324,10 +334,15 @@
     
     try{ isAdmin=(await db.collection('roles').doc(u.uid).get()).exists; }catch{ isAdmin=false; }
     $('#user-line').textContent=`${u.displayName||'익명'} ${isAdmin?'(관리자)':''}`;
-    $('#btn-login').style.display='none'; $('#btn-logout').style.display=''; $('#btn-my').style.display=''; $('#btn-admin').style.display=isAdmin?'':'none';
+    $('#btn-login').style.display='none';
+    $('#btn-logout').style.display='';
+    $('#btn-my').style.display='';
+    $('#btn-admin').style.display=isAdmin?'':'none';
     const link=`${location.origin}${location.pathname.replace(/index\.html?$/,'')}u.html?uid=${encodeURIComponent(u.uid)}`; $('#share-url').value=link;
-    $('#share-box').style.display=''; $('#invite-box').style.display='';
-    loadMyFriends(); loadSharedToMe();
+    $('#share-box').style.display='';
+    $('#invite-box').style.display='';
+    loadMyFriends();
+    loadSharedToMe();
   });
 </script>
 </body>
