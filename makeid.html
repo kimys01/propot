@@ -154,9 +154,9 @@
     <input type="password" id="password" class="input-field" placeholder="비밀번호 (6자 이상)" required />
     <input type="password" id="password-confirm" class="input-field" placeholder="비밀번호 확인" required />
     
-    <!-- 직무 선택 섹션 추가 -->
+    <!-- 직무 선택 섹션 -->
     <div class="job-selection-container">
-        <h4>어떤 일을 하시나요? (중복선택 가능)</h4>
+        <h4>어떤 일을 하시나요? (중복 선택 가능)</h4>
         <div class="job-options">
             <div class="job-option" data-job="designer">
                 <span class="icon">🎨</span>
@@ -177,7 +177,7 @@
         </div>
     </div>
 
-    <button id="btn-signup" class="btn btn-primary">회원가입</button>
+    <button id="btn-signup" class="btn btn-primary">회원가입하고 시작하기</button>
 
     <div class="login-link">
       이미 계정이 있으신가요? <a href="login.html">로그인</a>
@@ -191,7 +191,7 @@
     const firebaseConfig={apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",authDomain:"propot-cc6bf.firebaseapp.com",projectId:"propot-cc6bf",appId:"1:30940698980:web:1729f30e68d3beb24ac271"};
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const db = firebase.firestore(); // Firestore 초기화
+    const db = firebase.firestore();
 
     const $ = s => document.querySelector(s);
     const displayNameInput = $('#displayName');
@@ -200,17 +200,17 @@
     const passwordConfirmInput = $('#password-confirm');
     const errorDiv = $('#error-message');
 
-    // --- 직무 선택 로직 수정 (중복선택 가능) ---
+    // 직무 중복 선택 로직
     const jobOptions = document.querySelectorAll('.job-option');
-    let selectedJobs = []; // 배열로 변경
+    const selectedJobs = new Set();
     jobOptions.forEach(option => {
         option.addEventListener('click', () => {
-            option.classList.toggle('selected'); // 선택/해제 토글
+            option.classList.toggle('selected');
             const job = option.dataset.job;
-            if (option.classList.contains('selected')) {
-                selectedJobs.push(job); // 배열에 추가
+            if (selectedJobs.has(job)) {
+                selectedJobs.delete(job);
             } else {
-                selectedJobs = selectedJobs.filter(j => j !== job); // 배열에서 제거
+                selectedJobs.add(job);
             }
         });
     });
@@ -223,30 +223,24 @@
       errorDiv.textContent = '';
 
       if (!displayName || !email || !password || !passwordConfirm) {
-        errorDiv.textContent = '모든 항목을 입력해주세요.';
-        return;
+        return errorDiv.textContent = '모든 항목을 입력해주세요.';
       }
       if (password !== passwordConfirm) {
-        errorDiv.textContent = '비밀번호가 일치하지 않습니다.';
-        return;
+        return errorDiv.textContent = '비밀번호가 일치하지 않습니다.';
       }
       if (password.length < 6) {
-        errorDiv.textContent = '비밀번호는 6자 이상이어야 합니다.';
-        return;
+        return errorDiv.textContent = '비밀번호는 6자 이상이어야 합니다.';
       }
-      if (selectedJobs.length === 0) { // 배열 길이 확인으로 변경
-        errorDiv.textContent = '하나 이상의 관련 직무를 선택해주세요.';
-        return;
+      if (selectedJobs.size === 0) {
+        return errorDiv.textContent = '하나 이상의 직무를 선택해주세요.';
       }
 
       auth.createUserWithEmailAndPassword(email, password)
         .then(userCredential => {
           const user = userCredential.user;
-          // 1. Auth 프로필 업데이트
           return user.updateProfile({
             displayName: displayName
           }).then(() => {
-            // 2. Firestore에 사용자 정보 저장
             const userRef = db.collection('users').doc(user.uid);
             const lowerEmail = (user.email || '').trim().toLowerCase();
             return userRef.set({
@@ -255,27 +249,24 @@
                 email: user.email || null,
                 emailLower: lowerEmail,
                 photoURL: user.photoURL || null,
-                jobRole: selectedJobs, // 선택한 직무 정보 (배열) 저장
+                jobRole: Array.from(selectedJobs), // Set을 배열로 변환하여 저장
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             });
           }).then(() => {
-            // 3. 모든 작업 완료 후 리디렉션
-            location.href = 'index.html';
+            // --- 수정된 부분: 가입 후 자신의 포트폴리오 페이지로 바로 이동 ---
+            location.href = `u.html?uid=${user.uid}`;
           });
         })
         .catch(error => {
           console.error("Signup failed:", error);
           switch (error.code) {
             case 'auth/email-already-in-use':
-              errorDiv.textContent = '이미 사용 중인 이메일입니다.';
-              break;
+              errorDiv.textContent = '이미 사용 중인 이메일입니다.'; break;
             case 'auth/weak-password':
-              errorDiv.textContent = '비밀번호는 6자 이상이어야 합니다.';
-              break;
+              errorDiv.textContent = '비밀번호는 6자 이상이어야 합니다.'; break;
             case 'auth/invalid-email':
-              errorDiv.textContent = '올바른 이메일 형식이 아닙니다.';
-              break;
+              errorDiv.textContent = '올바른 이메일 형식이 아닙니다.'; break;
             default:
               errorDiv.textContent = '회원가입 중 오류가 발생했습니다.';
           }
