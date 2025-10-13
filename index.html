@@ -219,9 +219,9 @@
 
   // --- 사용자 문서 및 첫 프로젝트 생성 함수 ---
   async function ensureUserDoc(u){
-    const ref=db.collection('users').doc(u.uid);
-    const snap=await ref.get();
-    const data={
+    const userRef=db.collection('users').doc(u.uid);
+    const userSnap=await userRef.get();
+    const userData={
       uid:u.uid,
       displayName:u.displayName||'익명',
       email:u.email||null,
@@ -229,31 +229,28 @@
       photoURL:u.photoURL||null,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     };
-    if(!snap.exists) {
-      data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
-      data.jobRole = []; // 기본값으로 빈 배열 추가
-      
-      // --- 첫 프로젝트를 사용자 UID 문서 하위에 생성 ---
-      // 1. projects 컬렉션에 사용자 UID로 된 대표 문서를 만듭니다. (메타데이터 저장용)
-      await db.collection('projects').doc(u.uid).set({
-          ownerName: u.displayName || '익명',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-      
-      // 2. 해당 문서 아래의 'user_projects'라는 하위 컬렉션에 샘플 프로젝트를 추가합니다.
-      await db.collection('projects').doc(u.uid).collection('user_projects').add({
-          ownerUid: u.uid,
-          authorUid: u.uid,
-          authorName: u.displayName || '익명',
-          title: '나의 첫 번째 프로젝트',
-          desc: '이 프로젝트를 수정하거나 삭제하고 당신의 멋진 작업물을 채워보세요!',
-          tags: ['샘플', '시작하기'],
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          mainFile: null
-      });
+    if(!userSnap.exists) {
+      userData.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      userData.jobRole = [];
     }
-    await ref.set(data,{merge:true}); // merge:true로 기존 필드 유지
+    await userRef.set(userData,{merge:true});
+
+    // --- 수정된 부분: 프로젝트 문서를 사용자 UID로 직접 생성 ---
+    const projectRef = db.collection('projects').doc(u.uid);
+    const projectSnap = await projectRef.get();
+    if (!projectSnap.exists) {
+        await projectRef.set({
+            ownerUid: u.uid,
+            authorUid: u.uid,
+            authorName: u.displayName || '익명',
+            title: '나의 첫 번째 프로젝트',
+            desc: '이 프로젝트를 수정하거나 삭제하고 당신의 멋진 작업물을 채워보세요!',
+            tags: ['샘플', '시작하기'],
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            mainFile: null
+        });
+    }
   }
 
   async function inviteFriendByEmailOrUid(input){
@@ -294,7 +291,7 @@
     try{
       const snap = await db.collection('friends').where('friendUid','==',me.uid).orderBy('createdAt','desc').get();
       box.innerHTML=''; if(snap.empty){ box.innerHTML='<div class="muted">아직 공유받은 포트폴리오가 없습니다.</div>'; return; }
-      const ownerUids = snap.docs.map(doc => doc.data().ownerUid).filter(Boolean); // null이나 undefined인 uid 필터링
+      const ownerUids = snap.docs.map(doc => doc.data().ownerUid).filter(Boolean);
       
       if (ownerUids.length > 0) {
         const usersSnap = await db.collection('users').where('uid', 'in', ownerUids).get();
@@ -305,7 +302,6 @@
 
         snap.docs.forEach(d=>{
           const f=d.data();
-          // --- 수정된 부분: ownerUid가 없는 잘못된 데이터는 건너뜀 ---
           if (!f || !f.ownerUid) {
             console.warn('Skipping friend document with missing ownerUid:', d.id);
             return;
