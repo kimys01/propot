@@ -254,8 +254,7 @@
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             });
           }).then(() => {
-            // --- 수정된 부분: 가입 후 자신의 포트폴리오 페이지로 바로 이동 ---
-            location.href = `u.html?uid=${user.uid}`;
+            location.href = 'index.html';
           });
         })
         .catch(error => {
