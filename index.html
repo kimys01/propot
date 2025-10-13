@@ -233,7 +233,7 @@
       data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
       data.jobRole = []; // 기본값으로 빈 배열 추가
       
-      // --- 수정된 부분: 첫 프로젝트를 사용자 UID 문서 하위에 생성 ---
+      // --- 첫 프로젝트를 사용자 UID 문서 하위에 생성 ---
       // 1. projects 컬렉션에 사용자 UID로 된 대표 문서를 만듭니다. (메타데이터 저장용)
       await db.collection('projects').doc(u.uid).set({
           ownerName: u.displayName || '익명',
@@ -294,7 +294,7 @@
     try{
       const snap = await db.collection('friends').where('friendUid','==',me.uid).orderBy('createdAt','desc').get();
       box.innerHTML=''; if(snap.empty){ box.innerHTML='<div class="muted">아직 공유받은 포트폴리오가 없습니다.</div>'; return; }
-      const ownerUids = snap.docs.map(doc => doc.data().ownerUid);
+      const ownerUids = snap.docs.map(doc => doc.data().ownerUid).filter(Boolean); // null이나 undefined인 uid 필터링
       
       if (ownerUids.length > 0) {
         const usersSnap = await db.collection('users').where('uid', 'in', ownerUids).get();
@@ -305,6 +305,11 @@
 
         snap.docs.forEach(d=>{
           const f=d.data();
+          // --- 수정된 부분: ownerUid가 없는 잘못된 데이터는 건너뜀 ---
+          if (!f || !f.ownerUid) {
+            console.warn('Skipping friend document with missing ownerUid:', d.id);
+            return;
+          }
           const ownerInfo = ownersInfo[f.ownerUid];
           const ownerName = ownerInfo ? ownerInfo.displayName : '소유자';
 
