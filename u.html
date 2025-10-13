@@ -394,12 +394,11 @@
       </div>
     `;
 
-    // --- 댓글 섹션 HTML 추가 ---
     const commentsHtml = `
       <div class="comments-section">
           <h4 style="margin:0 0 8px 0; font-size: 16px;">댓글</h4>
           <div class="list" id="comments-${id}"></div>
-          ${me ? `<form class="list mt10" id="form-comment-${id}">
+          ${canWrite ? `<form class="list mt10" id="form-comment-${id}">
               <textarea class="inp" placeholder="댓글을 입력하세요..." required style="min-height: 60px;"></textarea>
               <div class="row"><button type="submit" class="secondary mini">등록</button></div>
           </form>` : '<p class="muted small mt10">댓글을 작성하려면 로그인이 필요합니다.</p>'}
@@ -425,7 +424,7 @@
     listEl.appendChild(card);
 
     // 댓글 기능 초기화
-    if(me) {
+    if(canWrite) {
       const commentForm = card.querySelector(`#form-comment-${id}`);
       if(commentForm) {
           commentForm.addEventListener('submit', (e) => addComment(e, id));
@@ -498,9 +497,18 @@
       btnDel.onclick = async () => {
         if (!confirm('정말로 이 프로젝트를 삭제하시겠습니까?')) return;
         try {
+          // 댓글 하위 컬렉션 삭제
+          const commentsRef = db.collection('projects').doc(id).collection('comments');
+          const commentsSnap = await commentsRef.get();
+          const batch = db.batch();
+          commentsSnap.docs.forEach(doc => batch.delete(doc.ref));
+          await batch.commit();
+
+          // 파일 삭제
           if (data.mainFile && data.mainFile.storagePath) {
             await storage.ref(data.mainFile.storagePath).delete().catch(e => console.warn("File deletion failed:", e));
           }
+          // 프로젝트 문서 삭제
           await db.collection('projects').doc(id).delete();
           await loadProjects();
         } catch (err) { alert('삭제 실패: ' + err.message); }
@@ -525,20 +533,67 @@
       snap.forEach(doc => {
         const commentId = doc.id;
         const data = doc.data();
-        const canDelete = me && (me.uid === data.authorUid || me.uid === ownerUid || isAdmin);
+        const canManageComment = me && (me.uid === data.authorUid || me.uid === ownerUid || isAdmin);
         const commentEl = document.createElement('div');
         commentEl.className = 'comment-item';
-        commentEl.innerHTML = `
-          <div class="row space">
-            <div class="muted small"><strong>${esc(data.authorName || '익명')}</strong> · ${fmt(data.createdAt)}</div>
-            ${canDelete ? `<button class="danger mini btn-del-comment" data-comment-id="${commentId}">삭제</button>` : ''}
+        
+        const viewHtml = `
+          <div class="comment-view">
+            <div class="row space">
+              <div class="muted small"><strong>${esc(data.authorName || '익명')}</strong> · ${fmt(data.createdAt)} ${data.updatedAt ? '(수정됨)' : ''}</div>
+              ${canManageComment ? `<div class="manage">
+                  <button class="ghost mini btn-mod-comment">수정</button>
+                  <button class="danger mini btn-del-comment">삭제</button>
+              </div>` : ''}
+            </div>
+            <p style="margin: 4px 0 0;">${esc(data.text)}</p>
           </div>
-          <p style="margin: 4px 0 0;">${esc(data.text)}</p>
         `;
+        
+        const editHtml = `
+          <div class="comment-edit-view list">
+            <textarea class="inp" style="min-height: 60px;">${esc(data.text)}</textarea>
+            <div class="row gap8">
+                <button type="button" class="secondary mini btn-save-mod">저장</button>
+                <button type="button" class="ghost mini btn-cancel-mod">취소</button>
+            </div>
+          </div>
+        `;
+        
+        commentEl.innerHTML = viewHtml;
         box.appendChild(commentEl);
 
-        if (canDelete) {
-          commentEl.querySelector('.btn-del-comment').onclick = async () => {
+        if (canManageComment) {
+          const viewMode = commentEl.querySelector('.comment-view');
+          
+          const editBtn = viewMode.querySelector('.btn-mod-comment');
+          editBtn.onclick = () => {
+            commentEl.innerHTML = editHtml;
+            const editMode = commentEl.querySelector('.comment-edit-view');
+            const saveBtn = editMode.querySelector('.btn-save-mod');
+            const cancelBtn = editMode.querySelector('.btn-cancel-mod');
+
+            saveBtn.onclick = async () => {
+              const newText = editMode.querySelector('textarea').value.trim();
+              if (!newText) return alert('댓글 내용을 입력하세요.');
+              try {
+                await db.collection('projects').doc(projectId).collection('comments').doc(commentId).update({
+                  text: newText,
+                  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                loadComments(projectId);
+              } catch (err) { alert('댓글 수정 실패: ' + err.message); }
+            };
+
+            cancelBtn.onclick = () => {
+              commentEl.innerHTML = viewHtml;
+              commentEl.querySelector('.btn-mod-comment').onclick = editBtn.onclick; // 이벤트 다시 연결
+              commentEl.querySelector('.btn-del-comment').onclick = deleteBtn.onclick; // 이벤트 다시 연결
+            };
+          };
+
+          const deleteBtn = viewMode.querySelector('.btn-del-comment');
+          deleteBtn.onclick = async () => {
             if (confirm('이 댓글을 삭제하시겠습니까?')) {
               try {
                 await db.collection('projects').doc(projectId).collection('comments').doc(commentId).delete();
