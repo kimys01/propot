@@ -159,36 +159,70 @@
     box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2);
   }
 
+  /* === 직무별 기능 스타일 === */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
+  }
+  .gallery-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: #eee;
+  }
+  .gallery-item img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+  .gallery-item:hover img {
+    transform: scale(1.05);
+  }
+  .gallery-item-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+    color: white;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .showreel-container {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+    max-width: 100%;
+    background: #000;
+    border-radius: 8px;
+  }
+  .showreel-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .article-item {
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: background-color 0.2s;
+  }
+  .article-item:hover {
+    background-color: #f9f9f9;
+  }
+
   /* === 기타 컴포넌트 스타일 === */
   .grid{display:grid;gap:12px}
   .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
   @media (max-width:860px){.grid.cols-2{grid-template-columns:1fr}}
-
-  .right-wrap{position:relative;min-width:220px}
-  .manage{position:absolute;top:-6px;right:-6px;display:flex;gap:6px;z-index:1}
-  .badges.has-actions{padding-right:170px}
-  @media (max-width:560px){.right-wrap{position:static}.manage{position:static;margin-top:10px}.badges.has-actions{padding-right:0}}
-  
-  .file-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:8px;
-    background:#f9f9f9;
-    border:1px solid var(--border-color);
-    border-radius:12px;
-    padding:8px 10px;
-  }
-  .flex{display:flex;gap:8px;align-items:center}
-  .thumb{
-    width:120px;
-    height:80px;
-    border-radius:8px;
-    object-fit:cover;
-    border:1px solid var(--border-color);
-  }
-  .select-cb{display:none}.selecting .select-cb{display:inline-block}
-  .small{font-size:12px}
 </style>
 </head>
 <body>
@@ -209,27 +243,33 @@
   
   <!-- === 직무별 맞춤 섹션 (기본 숨김) === -->
   <section id="developer-section" class="card" style="display:none;">
-    <h2 class="ttl">💻 개발자 포트폴리오</h2>
-    <p class="muted">GitHub 저장소, 기술 스택 등 개발 관련 프로젝트를 보여주는 공간입니다.</p>
-    <!-- 여기에 GitHub 연동, 코드 하이라이트 등 개발자 관련 기능 추가 -->
+    <h2 class="ttl">💻 Developer Profile</h2>
+    <div id="developer-profile-view"></div>
+    <form id="developer-edit-form" class="list mt14" style="display:none;">
+        <input id="github-username" class="inp" placeholder="GitHub 사용자 이름 (예: torvalds)"/>
+        <div class="row"><button type="submit">GitHub 정보 저장</button></div>
+    </form>
   </section>
 
   <section id="designer-section" class="card" style="display:none;">
-    <h2 class="ttl">🎨 디자이너 포트폴리오</h2>
-    <p class="muted">이미지 갤러리, 작업 과정 등 시각적인 결과물을 강조하는 공간입니다.</p>
-    <!-- 여기에 이미지 갤러리, 비포/애프터 뷰어 등 디자이너 관련 기능 추가 -->
+    <h2 class="ttl">🎨 Design Gallery</h2>
+    <p class="muted">대표 이미지가 있는 프로젝트가 여기에 표시됩니다.</p>
+    <div id="designer-gallery" class="gallery-grid mt14"></div>
   </section>
 
   <section id="creator-section" class="card" style="display:none;">
-      <h2 class="ttl">🎬 영상 포트폴리오</h2>
-      <p class="muted">쇼릴, 대표 영상 등 영상 콘텐츠를 보여주는 공간입니다.</p>
-      <!-- 여기에 비디오 플레이어, 쇼릴 섹션 등 영상 제작자 관련 기능 추가 -->
+      <h2 class="ttl">🎬 Showreel</h2>
+      <div id="creator-showreel-view"></div>
+      <form id="creator-edit-form" class="list mt14" style="display:none;">
+          <input id="showreel-url" class="inp" placeholder="YouTube 또는 Vimeo 영상 URL"/>
+          <div class="row"><button type="submit">쇼릴 저장</button></div>
+      </form>
   </section>
 
   <section id="writer-section" class="card" style="display:none;">
-      <h2 class="ttl">✍️ 작가/기획자 포트폴리오</h2>
-      <p class="muted">아티클, 제안서 등 텍스트 기반의 결과물을 보여주는 공간입니다.</p>
-      <!-- 여기에 가독성 좋은 텍스트 뷰어, PDF 뷰어 등 작가/기획자 관련 기능 추가 -->
+      <h2 class="ttl">✍️ Featured Articles</h2>
+      <p class="muted">주요 프로젝트가 여기에 요약되어 표시됩니다.</p>
+      <div id="writer-articles" class="list mt14"></div>
   </section>
 
 
@@ -277,13 +317,10 @@
   
   let me=null,isAdmin=false,canWrite=false;
   let loadedProjects=[];
+  let ownerData = {};
 
-  // --- 페이지 로드 시 가장 먼저 실행될 메인 함수 ---
   async function initializePage() {
-    // 1. 페이지 소유자의 프로필 정보를 불러와서 UI를 설정
     await loadOwnerProfileAndSetupUI();
-    
-    // 2. 현재 접속한 사용자의 로그인 상태를 확인하고 권한을 설정
     auth.onAuthStateChanged(async u => {
       me = u;
       if (u) {
@@ -296,35 +333,36 @@
         $('#btn-login').style.display = '';
         $('#btn-logout').style.display = 'none';
       }
-      await computePermission(); // 글쓰기 권한 계산
-      await loadProjects(); // 프로젝트 목록 불러오기
+      await computePermission();
+      setupEditForms(); // 권한 확인 후 수정 폼 설정
+      await loadProjects();
     });
   }
 
-  // --- 페이지 소유자 정보 조회 및 직무별 UI 설정 함수 ---
   async function loadOwnerProfileAndSetupUI() {
     try {
       const userDoc = await db.collection('users').doc(ownerUid).get();
       if (userDoc.exists) {
-        const userData = userDoc.data();
-        $('#owner-chip').textContent = `소유자: ${userData.displayName || '익명'}`;
+        ownerData = userDoc.data();
+        $('#owner-chip').textContent = `소유자: ${ownerData.displayName || '익명'}`;
         
-        const jobRoles = userData.jobRole || [];
+        const jobRoles = ownerData.jobRole || [];
         
-        // 직무에 따라 해당 섹션을 보여줌
+        // 직무별 섹션 표시 및 렌더링
         if (jobRoles.includes('developer')) {
           $('#developer-section').style.display = 'block';
+          renderDeveloperProfile(ownerData);
         }
         if (jobRoles.includes('designer')) {
           $('#designer-section').style.display = 'block';
         }
         if (jobRoles.includes('creator')) {
           $('#creator-section').style.display = 'block';
+          renderCreatorShowreel(ownerData);
         }
         if (jobRoles.includes('writer')) {
           $('#writer-section').style.display = 'block';
         }
-
       } else {
         $('#owner-chip').textContent = `존재하지 않는 사용자`;
       }
@@ -332,6 +370,116 @@
       console.error("Owner profile load failed:", e);
       $('#owner-chip').textContent = `정보 로딩 실패`;
     }
+  }
+
+  function setupEditForms() {
+      if (canWrite) {
+          const devForm = $('#developer-edit-form');
+          if(devForm) {
+              devForm.style.display = 'block';
+              devForm.addEventListener('submit', async (e) => {
+                  e.preventDefault();
+                  const username = $('#github-username').value.trim();
+                  if (!username) return alert('GitHub 사용자 이름을 입력하세요.');
+                  await db.collection('users').doc(ownerUid).update({ githubUsername: username });
+                  alert('저장되었습니다.');
+                  ownerData.githubUsername = username;
+                  renderDeveloperProfile(ownerData);
+              });
+          }
+
+          const creatorForm = $('#creator-edit-form');
+          if(creatorForm) {
+              creatorForm.style.display = 'block';
+              creatorForm.addEventListener('submit', async (e) => {
+                  e.preventDefault();
+                  const url = $('#showreel-url').value.trim();
+                  if (!url) return alert('영상 URL을 입력하세요.');
+                  await db.collection('users').doc(ownerUid).update({ showreelUrl: url });
+                  alert('저장되었습니다.');
+                  ownerData.showreelUrl = url;
+                  renderCreatorShowreel(ownerData);
+              });
+          }
+      }
+  }
+
+  function renderDeveloperProfile(userData) {
+      const view = $('#developer-profile-view');
+      if (userData.githubUsername) {
+          view.innerHTML = `<a href="https://github.com/${esc(userData.githubUsername)}" target="_blank" rel="noopener">
+              <button class="secondary">🔗 GitHub @${esc(userData.githubUsername)}</button>
+          </a>`;
+          $('#github-username').value = userData.githubUsername;
+      } else {
+          view.innerHTML = `<p class="muted">아직 GitHub 정보가 등록되지 않았습니다.</p>`;
+      }
+  }
+
+  function renderCreatorShowreel(userData) {
+      const view = $('#creator-showreel-view');
+      const url = userData.showreelUrl;
+      if (url) {
+          let embedUrl = '';
+          if (url.includes('youtube.com/watch?v=')) {
+              const videoId = url.split('v=')[1].split('&')[0];
+              embedUrl = `https://www.youtube.com/embed/${videoId}`;
+          } else if (url.includes('youtu.be/')) {
+              const videoId = url.split('youtu.be/')[1].split('?')[0];
+              embedUrl = `https://www.youtube.com/embed/${videoId}`;
+          } else if (url.includes('vimeo.com/')) {
+              const videoId = url.split('vimeo.com/')[1].split('?')[0];
+              embedUrl = `https://player.vimeo.com/video/${videoId}`;
+          }
+          if (embedUrl) {
+              view.innerHTML = `<div class="showreel-container"><iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe></div>`;
+          } else {
+              view.innerHTML = `<p class="muted">지원되지 않는 영상 URL 형식입니다. (YouTube, Vimeo 지원)</p>`;
+          }
+          $('#showreel-url').value = url;
+      } else {
+          view.innerHTML = `<p class="muted">아직 쇼릴 영상이 등록되지 않았습니다.</p>`;
+      }
+  }
+
+  function renderDesignerGallery(projects) {
+      const gallery = $('#designer-gallery');
+      if (!gallery) return;
+      gallery.innerHTML = '';
+      const imageProjects = projects.filter(p => p.data.mainFile && p.data.mainFile.contentType.startsWith('image/'));
+      if (imageProjects.length === 0) {
+          gallery.innerHTML = `<p class="muted">아직 갤러리에 표시할 이미지가 없습니다.</p>`;
+          return;
+      }
+      imageProjects.forEach(p => {
+          const item = document.createElement('div');
+          item.className = 'gallery-item';
+          item.innerHTML = `
+              <img src="${esc(p.data.mainFile.url)}" alt="${esc(p.data.title)}">
+              <div class="gallery-item-overlay">${esc(p.data.title)}</div>
+          `;
+          gallery.appendChild(item);
+      });
+  }
+
+  function renderWriterArticles(projects) {
+      const container = $('#writer-articles');
+      if (!container) return;
+      container.innerHTML = '';
+      if (projects.length === 0) {
+          container.innerHTML = `<p class="muted">아직 표시할 글이 없습니다.</p>`;
+          return;
+      }
+      projects.slice(0, 5).forEach(p => { // 최대 5개만 표시
+          const item = document.createElement('div');
+          item.className = 'article-item';
+          item.innerHTML = `
+              <h4 style="margin:0;">${esc(p.data.title)}</h4>
+              <p class="muted small" style="margin:2px 0 6px;">${esc(p.data.desc.substring(0, 100))}...</p>
+              ${(p.data.tags&&p.data.tags.length)?`<div class="row wrap" style="gap:6px;">${p.data.tags.map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}</div>`:''}
+          `;
+          container.appendChild(item);
+      });
   }
 
   $('#btn-login').onclick=()=>location.href=`login.html?redirect=${encodeURIComponent(location.href)}`;
@@ -356,7 +504,6 @@
     $('#write-section').style.display=canWrite?'block':'none';
   }
 
-  // (이하 프로젝트 로드 및 렌더링 함수들은 이전과 동일)
   const searchInput=document.getElementById('search-input'); if(searchInput) searchInput.addEventListener('input', applyFilter);
   function applyFilter(){
     if(!searchInput){ renderProjects(loadedProjects); return; }
@@ -384,6 +531,11 @@
       }
       loadedProjects=[]; snap.forEach(doc=>loadedProjects.push({id:doc.id,data:doc.data()}));
       loadedProjects.sort((a,b)=>((b.data.createdAt?.toMillis?.()||0)-(a.data.createdAt?.toMillis?.()||0)));
+      
+      // 프로젝트 로드 후 직무별 갤러리/목록 렌더링
+      renderDesignerGallery(loadedProjects);
+      renderWriterArticles(loadedProjects);
+
       applyFilter();
     }catch(e){ $('#list').innerHTML=`<div class="muted">프로젝트를 불러오는 데 실패했습니다: ${esc(e.message)}</div>`; }
   }
