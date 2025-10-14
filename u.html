@@ -143,7 +143,7 @@
   @media (max-width:860px){.grid.cols-2{grid-template-columns:1fr}}
   .manage{display:flex;gap:6px;}
 
-  /* --- 추가된 스타일: 파일 첨부, 갤러리 뷰, 댓글 --- */
+  /* --- 수정된 스타일: 파일 첨부 및 갤러리 뷰, 댓글 --- */
   .file-display {
     margin-top: 10px;
     background-color: #f9f9f9;
@@ -153,13 +153,52 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    justify-content: space-between;
   }
-  .file-display img {
-    width: 80px;
-    height: 60px;
+  .file-display-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0; /* 글자 넘침 방지를 위해 중요 */
+  }
+  .file-display-info img {
+    width: 60px;
+    height: 45px;
     object-fit: cover;
     border-radius: 4px;
+    flex-shrink: 0;
   }
+  .file-text-info {
+    min-width: 0;
+  }
+  .file-name {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+  }
+  .download-btn {
+    flex-shrink: 0;
+    background: transparent;
+    color: var(--text-muted-color);
+    border: 1px solid var(--border-color);
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .download-btn:hover {
+    background: #f0f0f0;
+    color: var(--primary-color);
+    border-color: #ccc;
+    text-decoration: none;
+  }
+
   .gallery-view {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   }
@@ -357,7 +396,6 @@
     card.className = 'project';
     card.id = `project-${id}`;
     
-    // 갤러리 뷰 썸네일
     let galleryThumbnailHtml = '';
     if (isGalleryView) {
         if (data.mainFile && data.mainFile.contentType.startsWith('image/')) {
@@ -367,16 +405,23 @@
         }
     }
     
-    // 설명 아래에 표시될 첨부파일
     let fileDisplayHtml = '';
     if (data.mainFile) {
         const isImage = data.mainFile.contentType.startsWith('image/');
         fileDisplayHtml = `<div class="file-display">
-            ${isImage ? `<img src="${esc(data.mainFile.url)}" alt="thumbnail">` : '📄'}
-            <div>
-                <a href="${esc(data.mainFile.url)}" target="_blank" rel="noopener">${esc(data.mainFile.name)}</a>
-                <div class="muted small">${(data.mainFile.size / 1024).toFixed(1)} KB</div>
+            <div class="file-display-info">
+                ${isImage ? `<img src="${esc(data.mainFile.url)}" alt="thumbnail">` : '<span style="font-size: 24px;">📄</span>'}
+                <div class="file-text-info">
+                    <span class="file-name">${esc(data.mainFile.name)}</span>
+                    <div class="muted small">${(data.mainFile.size / 1024).toFixed(1)} KB</div>
+                </div>
             </div>
+            <a href="${esc(data.mainFile.url)}" class="download-btn" target="_blank" rel="noopener" download title="파일 다운로드">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                  <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                </svg>
+            </a>
         </div>`;
     }
 
