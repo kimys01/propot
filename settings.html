@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<base href="https://kimys01.github.io/propot/">
+<title>내 정보 설정</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary-color: #6a5acd;
+    --button-hover-color: #5a4ab9;
+    --background-color: #f0f2f5;
+    --container-bg-color: #ffffff;
+    --text-color: #333;
+    --text-muted-color: #666;
+    --border-color: #e0e0e0;
+    --danger-color: #b91c1c;
+    --danger-hover-bg: rgba(185, 28, 28, 0.05);
+  }
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;
+    background:var(--background-color);
+    color:var(--text-color);
+    font:16px/1.5 'Noto Sans KR', system-ui,-apple-system,Segoe UI,Roboto,Noto Sans KR,Malgun Gothic,sans-serif;
+  }
+  a{color:var(--primary-color); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .hdr{
+    position:sticky;
+    top:0;
+    background:var(--container-bg-color);
+    border-bottom:1px solid var(--border-color);
+    backdrop-filter:blur(8px);
+    z-index:10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .hdr strong {
+    color: var(--primary-color);
+  }
+  .wrap{max-width:1024px;margin:0 auto;padding:14px 18px}
+  .row{display:flex;gap:10px;align-items:center}
+  .row.space{justify-content:space-between}
+  .row.gap8{gap:8px}
+  .row.ml-auto{margin-left:auto}
+  .pad16{padding:16px 18px}
+  .card{
+    background:var(--container-bg-color);
+    border: none;
+    border-radius:12px;
+    padding:24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    max-width: 600px;
+  }
+  .muted{color:var(--text-muted-color)} .ttl{margin:0 0 12px; color: var(--primary-color); font-weight: 700;}
+  button,input,a.secondary,a.ghost{font:inherit}
+  button, a.secondary, a.ghost {
+    padding:8px 14px;
+    border:none;
+    border-radius:8px;
+    font-size: 14px;
+    font-weight:500;
+    cursor:pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+  }
+  button{
+    background-color:var(--primary-color);
+    color:white;
+  }
+   button:hover {
+    background-color: var(--button-hover-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  button.secondary, a.secondary{
+    background-color:#f0f0f0;
+    color:var(--text-color);
+    border:1px solid var(--border-color);
+  }
+  button.secondary:hover, a.secondary:hover {
+    background-color: #e5e5e5;
+  }
+  button.ghost, a.ghost{
+    background:transparent;
+    color: var(--text-muted-color);
+    border:1px solid var(--border-color);
+  }
+   button.ghost:hover, a.ghost:hover {
+    background: rgba(106, 90, 205, 0.05);
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+  }
+   button.danger {
+    background:transparent;
+    color: var(--danger-color);
+    border:1px solid var(--danger-color);
+  }
+  button.danger:hover {
+    background: var(--danger-hover-bg);
+  }
+  .inp{
+    width:100%;
+    background:#ffffff;
+    color:var(--text-color);
+    border:1px solid var(--border-color);
+    border-radius:8px;
+    padding:10px 12px;
+    transition: all 0.2s;
+  }
+   .inp:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2);
+  }
+  .settings-form {
+    display: grid;
+    gap: 16px;
+  }
+  .form-group {
+      display: grid;
+      gap: 4px;
+  }
+  .form-group label {
+      font-size: 14px;
+      font-weight: 500;
+  }
+  .checkbox-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+  }
+  .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+  }
+  .profile-pic-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+  }
+  .profile-pic {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      background-color: #eee;
+      border: 2px solid var(--border-color);
+  }
+  .section-divider {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-color);
+  }
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="wrap row">
+    <div class="row gap8"><strong>⚙️ 내 정보 설정</strong></div>
+    <div class="row ml-auto gap8">
+      <a class="secondary" href="index.html">메인</a>
+      <a id="my-portfolio-link" class="secondary" href="#">내 포트폴리오</a>
+      <span id="user-line" class="muted"></span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap pad16" style="display: flex; justify-content: center;">
+  <section id="settings-card" class="card" style="display:none;">
+    <h2 class="ttl">계정 정보</h2>
+    <div class="form-group">
+      <label for="email-display">아이디 (이메일)</label>
+      <input id="email-display" class="inp" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+    </div>
+
+    <div class="section-divider">
+      <h2 class="ttl">프로필 수정</h2>
+      <div class="profile-pic-container">
+        <img id="profile-pic-preview" class="profile-pic" src="https://via.placeholder.com/80" alt="프로필 사진">
+        <div>
+          <input type="file" id="profile-pic-input" accept="image/*" style="display: none;">
+          <button type="button" class="secondary" onclick="$('#profile-pic-input').click()">사진 변경</button>
+          <p class="muted" style="font-size: 12px; margin: 8px 0 0;">1MB 이하의 이미지를 권장합니다.</p>
+        </div>
+      </div>
+      <form id="settings-form" class="settings-form">
+          <div class="form-group">
+            <label for="displayName">이름 (닉네임)</label>
+            <input id="displayName" class="inp" required>
+          </div>
+          <div class="form-group">
+            <label>주요 직무 (여러 개 선택 가능)</label>
+            <div id="job-roles-group" class="checkbox-group">
+            </div>
+          </div>
+          <div class="row">
+              <button type="submit">변경사항 저장</button>
+          </div>
+      </form>
+    </div>
+    
+    <div id="password-change-section" class="section-divider" style="display:none;">
+        <h2 class="ttl">암호 변경</h2>
+        <p class="muted">아래 버튼을 누르면 암호를 재설정할 수 있는 이메일이 발송됩니다.</p>
+        <div class="row">
+            <button type="button" id="btn-reset-password" class="secondary">암호 재설정 이메일 보내기</button>
+        </div>
+        <p id="reset-message" class="muted" style="font-size: 14px; margin-top: 10px; height: 1em;"></p>
+    </div>
+
+    <div class="section-divider">
+        <h2 class="ttl" style="color: var(--danger-color);">계정 삭제</h2>
+        <p class="muted">계정을 삭제하면 모든 데이터가 영구적으로 사라지며 복구할 수 없습니다.</p>
+        <div class="row">
+            <button type="button" id="btn-delete-account" class="danger">회원 탈퇴</button>
+        </div>
+    </div>
+  </section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script>
+  const cfg={apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",authDomain:"propot-cc6bf.firebaseapp.com",projectId:"propot-cc6bf",storageBucket:"propot-cc6bf.firebasestorage.app", appId:"1:30940698980:web:1729f30e68d3beb24ac271"};
+  firebase.initializeApp(cfg);
+  const auth=firebase.auth(), db=firebase.firestore(), storage=firebase.storage();
+
+  const $=s=>document.querySelector(s);
+  let me=null;
+  let newProfilePicFile = null;
+
+  auth.onAuthStateChanged(async u=>{
+    me=u;
+    if(!u){
+      alert('로그인이 필요합니다.');
+      location.href = `login.html?redirect=${encodeURIComponent(location.href)}`;
+      return;
+    }
+    
+    $('#user-line').textContent=`${u.displayName||'익명'}`;
+    $('#my-portfolio-link').href = `u.html?uid=${u.uid}`;
+    
+    const providerId = u.providerData[0]?.providerId;
+    if (providerId === 'password') {
+        $('#password-change-section').style.display = 'block';
+    } else {
+        $('#password-change-section').style.display = 'none';
+    }
+
+    loadUserSettings();
+    $('#settings-card').style.display = 'block';
+  });
+
+  async function loadUserSettings() {
+      try {
+          const userDoc = await db.collection('users').doc(me.uid).get();
+          if (!userDoc.exists) {
+              console.error('User document not found!');
+              return;
+          }
+          const userData = userDoc.data();
+          
+          $('#email-display').value = userData.email || '이메일 정보 없음';
+          $('#displayName').value = userData.displayName || '';
+          $('#profile-pic-preview').src = userData.photoURL || `https://via.placeholder.com/80?text=${(userData.displayName||'P').charAt(0)}`;
+
+
+          const roles = ['designer', 'developer', 'creator', 'writer'];
+          const userRoles = userData.jobRole || [];
+          const jobRolesGroup = $('#job-roles-group');
+          jobRolesGroup.innerHTML = roles.map(role => `
+              <label>
+                <input type="checkbox" name="jobRole" value="${role}" ${userRoles.includes(role) ? 'checked' : ''}> ${role.charAt(0).toUpperCase() + role.slice(1)}
+              </label>
+            `).join('');
+            
+      } catch(e) {
+          alert('사용자 정보를 불러오는 데 실패했습니다.');
+          console.error(e);
+      }
+  }
+
+  $('#profile-pic-input').addEventListener('change', (e) => {
+    newProfilePicFile = e.target.files[0];
+    if (newProfilePicFile) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        $('#profile-pic-preview').src = event.target.result;
+      };
+      reader.readAsDataURL(newProfilePicFile);
+    }
+  });
+
+  $('#settings-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newName = $('#displayName').value.trim();
+      const newRoles = Array.from(document.querySelectorAll('input[name="jobRole"]:checked')).map(cb => cb.value);
+
+      if (!newName) {
+          return alert('이름을 입력해주세요.');
+      }
+
+      try {
+          let photoURL = me.photoURL;
+          // 새 프로필 사진이 있으면 업로드
+          if (newProfilePicFile) {
+              if (newProfilePicFile.size > 1 * 1024 * 1024) {
+                  throw new Error('프로필 사진은 1MB를 초과할 수 없습니다.');
+              }
+              const storagePath = `avatars/${me.uid}/profile.jpg`;
+              const fileRef = storage.ref(storagePath);
+              const snap = await fileRef.put(newProfilePicFile);
+              photoURL = await snap.ref.getDownloadURL();
+          }
+
+          // Auth 프로필 업데이트
+          await me.updateProfile({
+              displayName: newName,
+              photoURL: photoURL
+          });
+          
+          // Firestore users 컬렉션 업데이트
+          await db.collection('users').doc(me.uid).update({
+              displayName: newName,
+              jobRole: newRoles,
+              photoURL: photoURL,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          
+          alert('정보가 성공적으로 수정되었습니다.');
+          $('#user-line').textContent = newName;
+          newProfilePicFile = null;
+
+      } catch(err) {
+          alert('정보 수정에 실패했습니다: ' + err.message);
+          console.error(err);
+      }
+  });
+
+  $('#btn-reset-password').addEventListener('click', () => {
+    const resetButton = $('#btn-reset-password');
+    const resetMessage = $('#reset-message');
+
+    if (!me || !me.email) {
+        resetMessage.textContent = '이메일 정보가 없어 재설정할 수 없습니다.';
+        return;
+    }
+
+    resetButton.disabled = true;
+    resetMessage.textContent = '이메일을 보내는 중...';
+
+    auth.sendPasswordResetEmail(me.email)
+        .then(() => {
+            resetMessage.textContent = '✅ 암호 재설정 이메일을 보냈습니다. 받은편지함을 확인해주세요.';
+        })
+        .catch((error) => {
+            console.error("Password reset error:", error);
+            resetMessage.textContent = '오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+        })
+        .finally(() => {
+            setTimeout(() => { resetButton.disabled = false; }, 5000);
+        });
+  });
+
+  $('#btn-delete-account').addEventListener('click', async () => {
+      if (!confirm('정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, Firestore의 사용자 정보도 함께 삭제됩니다.')) {
+          return;
+      }
+      try {
+          // Firestore에서 사용자 문서 먼저 삭제
+          await db.collection('users').doc(me.uid).delete();
+          
+          // Firebase Auth에서 사용자 삭제
+          await me.delete();
+          
+          alert('계정이 성공적으로 삭제되었습니다.');
+          location.href = 'index.html';
+      } catch (error) {
+          console.error("Account deletion failed:", error);
+          alert('계정 삭제 중 오류가 발생했습니다. 재로그인 후 다시 시도해주세요.');
+      }
+  });
+</script>
+</body>
+</html>
+
