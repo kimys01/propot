@@ -389,7 +389,7 @@
             <button class="danger mini btn-del">삭제</button>
           </div>` : ''}
         </div>
-        <p style="margin:8px 0 0; white-space: pre-wrap; display:${isGalleryView ? 'none' : 'block'};">${esc(data.desc)}</p>
+        <p style="margin:8px 0 0; white-space: pre-wrap;">${esc(data.desc)}</p>
         ${(data.tags && data.tags.length) ? `<div class="row wrap" style="gap:6px;margin-top:8px">${data.tags.map(t => `<span class="chip">#${esc(t)}</span>`).join('')}</div>` : ''}
       </div>
     `;
