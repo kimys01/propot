@@ -141,6 +141,7 @@
     <div class="row ml-auto gap8">
       <span id="user-line" class="muted">로그인 필요</span>
       <button id="btn-login" class="secondary">로그인</button>
+      <a id="btn-settings" class="secondary" href="settings.html" style="display:none">설정</a>
       <button id="btn-logout" class="ghost" style="display:none">로그아웃</button>
       <button id="btn-my" class="secondary" style="display:none">내 포트폴리오로</button>
       <a id="btn-admin" class="ghost" href="admin.html" style="display:none">관리자</a>
@@ -217,15 +218,12 @@
   };
   $('#btn-copy').onclick=async()=>{ try { await navigator.clipboard.writeText($('#share-url').value); alert('복사 완료!'); } catch(e) { alert('복사 실패'); } };
 
-  // --- 수정된 부분: 사용자 문서 및 첫 프로젝트 생성 함수 ---
   async function ensureUserDoc(u){
     const userRef = db.collection('users').doc(u.uid);
     const userSnap = await userRef.get();
     
-    // 사용자가 새로운지 여부를 먼저 확인
     const isNewUser = !userSnap.exists;
 
-    // 사용자 데이터 준비
     const userData = {
       uid:u.uid,
       displayName:u.displayName||'익명',
@@ -239,10 +237,8 @@
       userData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
       userData.jobRole = [];
     }
-    // 사용자 문서 생성 또는 업데이트
     await userRef.set(userData, {merge:true});
 
-    // 만약 새로운 사용자라면, 샘플 프로젝트를 생성
     if (isNewUser) {
         await db.collection('projects').add({
             ownerUid: u.uid,
@@ -326,9 +322,14 @@
 
   auth.onAuthStateChanged(async u=>{
     me=u;
+    const settingsBtn = $('#btn-settings');
     if(!u){
       $('#user-line').textContent='로그인 필요';
-      $('#btn-login').style.display=''; $('#btn-logout').style.display='none'; $('#btn-my').style.display='none'; $('#btn-admin').style.display='none';
+      $('#btn-login').style.display='';
+      $('#btn-logout').style.display='none';
+      $('#btn-my').style.display='none';
+      $('#btn-admin').style.display='none';
+      settingsBtn.style.display='none';
       $('#share-box').style.display='none';
       $('#invite-box').style.display='none';
       $('#my-friends').innerHTML='';
@@ -344,6 +345,7 @@
     $('#btn-logout').style.display='';
     $('#btn-my').style.display='';
     $('#btn-admin').style.display=isAdmin?'':'none';
+    settingsBtn.style.display='';
     const link=`${location.origin}${location.pathname.replace(/index\.html?$/,'')}u.html?uid=${encodeURIComponent(u.uid)}`; $('#share-url').value=link;
     $('#share-box').style.display='';
     $('#invite-box').style.display='';
