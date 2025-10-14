@@ -357,24 +357,27 @@
     card.className = 'project';
     card.id = `project-${id}`;
     
-    let fileHtml = '';
+    // 갤러리 뷰 썸네일
+    let galleryThumbnailHtml = '';
+    if (isGalleryView) {
+        if (data.mainFile && data.mainFile.contentType.startsWith('image/')) {
+            galleryThumbnailHtml = `<img src="${esc(data.mainFile.url)}" alt="${esc(data.title)}" class="project-thumbnail">`;
+        } else {
+            galleryThumbnailHtml = `<div class="project-thumbnail" style="background:#f0f0f0; display:flex; align-items:center; justify-content:center; color:#ccc;">No Image</div>`;
+        }
+    }
+    
+    // 설명 아래에 표시될 첨부파일
+    let fileDisplayHtml = '';
     if (data.mainFile) {
         const isImage = data.mainFile.contentType.startsWith('image/');
-        if (isGalleryView) {
-            if (isImage) {
-                fileHtml = `<img src="${esc(data.mainFile.url)}" alt="${esc(data.title)}" class="project-thumbnail">`;
-            }
-        } else {
-            fileHtml = `<div class="file-display">
-                ${isImage ? `<img src="${esc(data.mainFile.url)}" alt="thumbnail">` : '📄'}
-                <div>
-                    <a href="${esc(data.mainFile.url)}" target="_blank" rel="noopener">${esc(data.mainFile.name)}</a>
-                    <div class="muted small">${(data.mainFile.size / 1024).toFixed(1)} KB</div>
-                </div>
-            </div>`;
-        }
-    } else if (isGalleryView) {
-        fileHtml = `<div class="project-thumbnail" style="background:#f0f0f0; display:flex; align-items:center; justify-content:center; color:#ccc;">No Image</div>`;
+        fileDisplayHtml = `<div class="file-display">
+            ${isImage ? `<img src="${esc(data.mainFile.url)}" alt="thumbnail">` : '📄'}
+            <div>
+                <a href="${esc(data.mainFile.url)}" target="_blank" rel="noopener">${esc(data.mainFile.name)}</a>
+                <div class="muted small">${(data.mainFile.size / 1024).toFixed(1)} KB</div>
+            </div>
+        </div>`;
     }
 
     const infoHtml = `
@@ -390,6 +393,7 @@
           </div>` : ''}
         </div>
         <p style="margin:8px 0 0; white-space: pre-wrap;">${esc(data.desc)}</p>
+        ${fileDisplayHtml}
         ${(data.tags && data.tags.length) ? `<div class="row wrap" style="gap:6px;margin-top:8px">${data.tags.map(t => `<span class="chip">#${esc(t)}</span>`).join('')}</div>` : ''}
       </div>
     `;
@@ -404,7 +408,7 @@
           </form>` : '<p class="muted small mt10">댓글을 작성하려면 로그인이 필요합니다.</p>'}
       </div>`;
 
-    card.innerHTML = fileHtml + infoHtml + commentsHtml;
+    card.innerHTML = galleryThumbnailHtml + infoHtml + commentsHtml;
 
     let editHtml = `
       <form class="list edit-form" style="padding:16px;">
@@ -423,7 +427,6 @@
 
     listEl.appendChild(card);
 
-    // 댓글 기능 초기화
     if(canWrite) {
       const commentForm = card.querySelector(`#form-comment-${id}`);
       if(commentForm) {
@@ -497,18 +500,15 @@
       btnDel.onclick = async () => {
         if (!confirm('정말로 이 프로젝트를 삭제하시겠습니까?')) return;
         try {
-          // 댓글 하위 컬렉션 삭제
           const commentsRef = db.collection('projects').doc(id).collection('comments');
           const commentsSnap = await commentsRef.get();
           const batch = db.batch();
           commentsSnap.docs.forEach(doc => batch.delete(doc.ref));
           await batch.commit();
 
-          // 파일 삭제
           if (data.mainFile && data.mainFile.storagePath) {
             await storage.ref(data.mainFile.storagePath).delete().catch(e => console.warn("File deletion failed:", e));
           }
-          // 프로젝트 문서 삭제
           await db.collection('projects').doc(id).delete();
           await loadProjects();
         } catch (err) { alert('삭제 실패: ' + err.message); }
@@ -516,7 +516,6 @@
     }
   }
 
-  // --- 댓글 관련 함수들 ---
   async function loadComments(projectId) {
     const box = $(`#project-${projectId} #comments-${projectId}`);
     if (!box) return;
@@ -587,8 +586,8 @@
 
             cancelBtn.onclick = () => {
               commentEl.innerHTML = viewHtml;
-              commentEl.querySelector('.btn-mod-comment').onclick = editBtn.onclick; // 이벤트 다시 연결
-              commentEl.querySelector('.btn-del-comment').onclick = deleteBtn.onclick; // 이벤트 다시 연결
+              commentEl.querySelector('.btn-mod-comment').onclick = editBtn.onclick;
+              commentEl.querySelector('.btn-del-comment').onclick = deleteBtn.onclick;
             };
           };
 
