@@ -198,6 +198,10 @@
     border-color: #ccc;
     text-decoration: none;
   }
+  .download-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.7;
+  }
 
   .gallery-view {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -412,16 +416,16 @@
             <div class="file-display-info">
                 ${isImage ? `<img src="${esc(data.mainFile.url)}" alt="thumbnail">` : '<span style="font-size: 24px;">📄</span>'}
                 <div class="file-text-info">
-                    <span class="file-name">${esc(data.mainFile.name)}</span>
+                    <a href="${esc(data.mainFile.url)}" target="_blank" rel="noopener" class="file-name">${esc(data.mainFile.name)}</a>
                     <div class="muted small">${(data.mainFile.size / 1024).toFixed(1)} KB</div>
                 </div>
             </div>
-            <a href="${esc(data.mainFile.url)}" class="download-btn" target="_blank" rel="noopener" download title="파일 다운로드">
+            <button class="download-btn btn-download-file" data-url="${esc(data.mainFile.url)}" data-filename="${esc(data.mainFile.name)}" title="파일 다운로드">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                   <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
                   <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
                 </svg>
-            </a>
+            </button>
         </div>`;
     }
 
@@ -471,6 +475,42 @@
     `;
 
     listEl.appendChild(card);
+    
+    const downloadBtn = card.querySelector('.btn-download-file');
+    if (downloadBtn) {
+        downloadBtn.onclick = async (e) => {
+            const button = e.currentTarget;
+            const url = button.dataset.url;
+            const filename = button.dataset.filename;
+            const originalContent = button.innerHTML;
+            try {
+                button.innerHTML = '...';
+                button.disabled = true;
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('파일을 다운로드할 수 없습니다.');
+                
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(blobUrl);
+                a.remove();
+
+            } catch (err) {
+                console.error('Download error:', err);
+                alert('파일 다운로드 중 오류가 발생했습니다.');
+            } finally {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+            }
+        };
+    }
 
     if(canWrite) {
       const commentForm = card.querySelector(`#form-comment-${id}`);
