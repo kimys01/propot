@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<base href="https://kimys01.github.io/propot/">
+<title>내 정보 설정</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary-color: #6a5acd;
+    --button-hover-color: #5a4ab9;
+    --background-color: #f0f2f5;
+    --container-bg-color: #ffffff;
+    --text-color: #333;
+    --text-muted-color: #666;
+    --border-color: #e0e0e0;
+  }
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;
+    background:var(--background-color);
+    color:var(--text-color);
+    font:16px/1.5 'Noto Sans KR', system-ui,-apple-system,Segoe UI,Roboto,Noto Sans KR,Malgun Gothic,sans-serif;
+  }
+  a{color:var(--primary-color); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .hdr{
+    position:sticky;
+    top:0;
+    background:var(--container-bg-color);
+    border-bottom:1px solid var(--border-color);
+    backdrop-filter:blur(8px);
+    z-index:10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .hdr strong {
+    color: var(--primary-color);
+  }
+  .wrap{max-width:1024px;margin:0 auto;padding:14px 18px}
+  .row{display:flex;gap:10px;align-items:center}
+  .row.space{justify-content:space-between}
+  .row.gap8{gap:8px}
+  .row.ml-auto{margin-left:auto}
+  .pad16{padding:16px 18px}
+  .card{
+    background:var(--container-bg-color);
+    border: none;
+    border-radius:12px;
+    padding:24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    max-width: 600px;
+  }
+  .muted{color:var(--text-muted-color)} .ttl{margin:0 0 12px; color: var(--primary-color); font-weight: 700;}
+  button,input,a.secondary,a.ghost{font:inherit}
+  button, a.secondary, a.ghost {
+    padding:8px 14px;
+    border:none;
+    border-radius:8px;
+    font-size: 14px;
+    font-weight:500;
+    cursor:pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+  }
+  button{
+    background-color:var(--primary-color);
+    color:white;
+  }
+   button:hover {
+    background-color: var(--button-hover-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  button.secondary, a.secondary{
+    background-color:#f0f0f0;
+    color:var(--text-color);
+    border:1px solid var(--border-color);
+  }
+  button.secondary:hover, a.secondary:hover {
+    background-color: #e5e5e5;
+  }
+  button.ghost, a.ghost{
+    background:transparent;
+    color: var(--text-muted-color);
+    border:1px solid var(--border-color);
+  }
+   button.ghost:hover, a.ghost:hover {
+    background: rgba(106, 90, 205, 0.05);
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+  }
+  .inp{
+    width:100%;
+    background:#ffffff;
+    color:var(--text-color);
+    border:1px solid var(--border-color);
+    border-radius:8px;
+    padding:10px 12px;
+    transition: all 0.2s;
+  }
+   .inp:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2);
+  }
+  .settings-form {
+    display: grid;
+    gap: 16px;
+  }
+  .form-group {
+      display: grid;
+      gap: 4px;
+  }
+  .form-group label {
+      font-size: 14px;
+      font-weight: 500;
+  }
+  .checkbox-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+  }
+  .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="wrap row">
+    <div class="row gap8"><strong>⚙️ 내 정보 설정</strong></div>
+    <div class="row ml-auto gap8">
+      <a class="secondary" href="index.html">메인</a>
+      <a id="my-portfolio-link" class="secondary" href="#">내 포트폴리오</a>
+      <span id="user-line" class="muted"></span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap pad16" style="display: flex; justify-content: center;">
+  <section id="settings-card" class="card" style="display:none;">
+    <h2 class="ttl">프로필 수정</h2>
+    <form id="settings-form" class="settings-form">
+        <div class="form-group">
+          <label for="displayName">이름 (닉네임)</label>
+          <input id="displayName" class="inp" required>
+        </div>
+        <div class="form-group">
+          <label>주요 직무 (여러 개 선택 가능)</label>
+          <div id="job-roles-group" class="checkbox-group">
+            <!-- 직무 체크박스가 여기에 동적으로 삽입됩니다. -->
+          </div>
+        </div>
+        <div class="row">
+            <button type="submit">변경사항 저장</button>
+        </div>
+    </form>
+  </section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  const cfg={apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",authDomain:"propot-cc6bf.firebaseapp.com",projectId:"propot-cc6bf",appId:"1:30940698980:web:1729f30e68d3beb24ac271"};
+  firebase.initializeApp(cfg);
+  const auth=firebase.auth(), db=firebase.firestore();
+
+  const $=s=>document.querySelector(s);
+  let me=null;
+
+  auth.onAuthStateChanged(async u=>{
+    me=u;
+    if(!u){
+      alert('로그인이 필요합니다.');
+      location.href = `login.html?redirect=${encodeURIComponent(location.href)}`;
+      return;
+    }
+    
+    $('#user-line').textContent=`${u.displayName||'익명'}`;
+    $('#my-portfolio-link').href = `u.html?uid=${u.uid}`;
+    
+    loadUserSettings();
+    $('#settings-card').style.display = 'block';
+  });
+
+  async function loadUserSettings() {
+      try {
+          const userDoc = await db.collection('users').doc(me.uid).get();
+          if (!userDoc.exists) {
+              console.error('User document not found!');
+              return;
+          }
+          const userData = userDoc.data();
+          
+          $('#displayName').value = userData.displayName || '';
+
+          const roles = ['designer', 'developer', 'creator', 'writer'];
+          const userRoles = userData.jobRole || [];
+          const jobRolesGroup = $('#job-roles-group');
+          jobRolesGroup.innerHTML = roles.map(role => `
+              <label>
+                <input type="checkbox" name="jobRole" value="${role}" ${userRoles.includes(role) ? 'checked' : ''}> ${role.charAt(0).toUpperCase() + role.slice(1)}
+              </label>
+            `).join('');
+            
+      } catch(e) {
+          alert('사용자 정보를 불러오는 데 실패했습니다.');
+          console.error(e);
+      }
+  }
+
+  $('#settings-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newName = $('#displayName').value.trim();
+      const newRoles = Array.from(document.querySelectorAll('input[name="jobRole"]:checked')).map(cb => cb.value);
+
+      if (!newName) {
+          return alert('이름을 입력해주세요.');
+      }
+
+      try {
+          // 1. Firestore users 컬렉션 업데이트
+          await db.collection('users').doc(me.uid).update({
+              displayName: newName,
+              jobRole: newRoles,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          
+          // 2. Firebase Auth 프로필 업데이트
+          if (me.displayName !== newName) {
+              await me.updateProfile({
+                  displayName: newName
+              });
+          }
+          
+          alert('정보가 성공적으로 수정되었습니다.');
+          // 헤더의 이름도 업데이트
+          $('#user-line').textContent = newName;
+
+      } catch(err) {
+          alert('정보 수정에 실패했습니다: ' + err.message);
+          console.error(err);
+      }
+  });
+
+</script>
+</body>
+</html>
