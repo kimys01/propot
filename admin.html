@@ -9,7 +9,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  /* === 일관된 스타일 테마 적용 === */
   :root {
     --primary-color: #6a5acd;
     --button-hover-color: #5a4ab9;
@@ -19,8 +18,6 @@
     --text-muted-color: #666;
     --border-color: #e0e0e0;
   }
-
-  /* === 기본 스타일 초기화 및 설정 === */
   *{box-sizing:border-box}
   html,body{
     margin:0;
@@ -30,8 +27,6 @@
   }
   a{color:var(--primary-color); text-decoration:none}
   a:hover{text-decoration:underline}
-
-  /* === 헤더 스타일 === */
   .hdr{
     position:sticky;
     top:0;
@@ -44,15 +39,12 @@
   .hdr strong {
     color: var(--primary-color);
   }
-
-  /* === 레이아웃 헬퍼 클래스 === */
   .wrap{max-width:1024px;margin:0 auto;padding:14px 18px}
   .row{display:flex;gap:10px;align-items:center}
   .row.space{justify-content:space-between}
   .row.gap8{gap:8px}
+  .row.ml-auto{margin-left:auto}
   .pad16{padding:16px 18px}
-
-  /* === 카드 및 콘텐츠 스타일 === */
   .card{
     background:var(--container-bg-color);
     border: none;
@@ -64,8 +56,8 @@
   .item{
     background: #f9f9f9;
     border:1px solid var(--border-color);
-    border-radius:10px;
-    padding:16px;
+    border-radius:12px;
+    padding:12px;
   }
   .chip{
     font-size:12px;
@@ -74,19 +66,10 @@
     background-color: #ebebeb;
     color: var(--text-muted-color);
   }
-  .muted{color:var(--text-muted-color)}
-  .ttl{
-    margin:0 0 12px;
-    color: var(--primary-color);
-    font-weight: 700;
-    font-size: 22px;
-  }
-
-  /* === 버튼 및 입력창 스타일 === */
+  .muted{color:var(--text-muted-color)} .ttl{margin:0 0 12px; color: var(--primary-color); font-weight: 700;}
   button,input,a.secondary,a.ghost{font:inherit}
-  
   button, a.secondary, a.ghost {
-    padding:10px 16px;
+    padding:8px 14px;
     border:none;
     border-radius:8px;
     font-size: 14px;
@@ -97,17 +80,15 @@
     justify-content: center;
     align-items: center;
   }
-
-  button{ /* 기본 버튼 (Primary) */
+  button{
     background-color:var(--primary-color);
     color:white;
   }
-  button:hover {
+   button:hover {
     background-color: var(--button-hover-color);
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
-
-  button.secondary, a.secondary{ /* 보조 버튼 (Secondary) */
+  button.secondary, a.secondary{
     background-color:#f0f0f0;
     color:var(--text-color);
     border:1px solid var(--border-color);
@@ -115,28 +96,26 @@
   button.secondary:hover, a.secondary:hover {
     background-color: #e5e5e5;
   }
-  
-  button.ghost, a.ghost{ /* 고스트 버튼 */
+  button.ghost, a.ghost{
     background:transparent;
     color: var(--text-muted-color);
     border:1px solid var(--border-color);
   }
-  button.ghost:hover, a.ghost:hover {
+   button.ghost:hover, a.ghost:hover {
     background: rgba(106, 90, 205, 0.05);
     color: var(--primary-color);
     border-color: var(--primary-color);
   }
-  
   .inp{
     width:100%;
     background:#ffffff;
     color:var(--text-color);
     border:1px solid var(--border-color);
     border-radius:8px;
-    padding:12px 14px;
+    padding:10px 12px;
     transition: all 0.2s;
   }
-  .inp:focus {
+   .inp:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2);
@@ -146,11 +125,11 @@
 <body>
 <header class="hdr">
   <div class="wrap row">
-    <div class="row gap8"><strong>🛠️ 관리자</strong><span class="chip">사용자 목록</span></div>
-    <div class="row" style="margin-left:auto;gap:8px">
-      <a class="secondary" href="index.html">메인으로</a>
+    <div class="row gap8"><strong>🛠 관리자</strong><span class="chip">users 목록</span></div>
+    <div class="row ml-auto gap8">
+      <a class="secondary" href="index.html">메인</a>
       <span id="user-line" class="muted">로그인 필요</span>
-      <button id="btn-login" class="secondary" style="display:none;">로그인</button>
+      <button id="btn-login" class="secondary">로그인</button>
       <button id="btn-logout" class="ghost" style="display:none">로그아웃</button>
     </div>
   </div>
@@ -179,8 +158,7 @@
   const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   let me=null,isAdmin=false,users=[];
 
-  // 관리자 페이지에서는 로그인 버튼을 누르면 로그인 페이지로 이동
-  $('#btn-login').onclick=()=>location.href='login.html';
+  $('#btn-login').onclick=()=>location.href = 'login.html';
   $('#btn-logout').onclick=()=>auth.signOut();
   $('#btn-reload').onclick=()=>loadUsers();
   $('#q').addEventListener('input',()=>render(filter($('#q').value)));
@@ -189,19 +167,13 @@
     me=u;
     if(!u){
       $('#user-line').textContent='로그인 필요';
-      // 로그인이 안되어있으면 바로 로그인 페이지로 보냄
-      location.href = `login.html?redirect=${encodeURIComponent(location.href)}`;
+      $('#btn-login').style.display=''; $('#btn-logout').style.display='none';
       return;
     }
     try{ isAdmin=(await db.collection('roles').doc(u.uid).get()).exists; }catch{ isAdmin=false; }
-    $('#user-line').textContent=`${u.displayName||'익명'} ${isAdmin?'(관리자)':''}`;
+    $('#user-line').textContent=`${u.displayName||'익명'} (${u.email||''})${isAdmin?' · 관리자':''}`;
     $('#btn-login').style.display='none'; $('#btn-logout').style.display='';
-    
-    if(!isAdmin){ 
-      alert('관리자만 접근할 수 있는 페이지입니다. 메인으로 이동합니다.'); 
-      location.href='index.html'; 
-      return; 
-    }
+    if(!isAdmin){ alert('관리자만 접근 가능합니다. 메인으로 이동합니다.'); location.href='index.html'; return; }
     loadUsers();
   });
 
@@ -213,7 +185,7 @@
         return {docs:s2.docs.sort((a,b)=>((b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0)))}; 
       });
       users=snap.docs.map(d=>({id:d.id,...d.data()})); render(users);
-    }catch(e){ box.innerHTML=`<div class="muted">사용자 목록을 불러오는 데 실패했습니다: ${esc(e.message)}</div>`; }
+    }catch(e){ box.innerHTML=`<div class="muted">로드 실패: ${esc(e.message)}</div>`; }
   }
 
   function filter(q){ q=(q||'').trim().toLowerCase(); if(!q) return users;
@@ -221,13 +193,14 @@
   }
 
   function render(list){
-    const box=$('#list'); box.innerHTML=''; if(!list.length){ box.innerHTML='<div class="muted" style="text-align:center; padding: 20px 0;">사용자가 없습니다.</div>'; return; }
+    const box=$('#list'); box.innerHTML=''; if(!list.length){ box.innerHTML='<div class="muted">사용자가 없습니다.</div>'; return; }
     list.forEach(u=>{
       const row=document.createElement('div'); row.className='item';
-      row.innerHTML=`<div class="row space"><div><div><strong>${esc(u.displayName||'익명')}</strong></div><div class="muted" style="font-size:12px;">${esc(u.email||'이메일 없음')} · ${esc(u.uid)}</div></div><div class="row gap8"><a class="ghost" href="u.html?uid=${encodeURIComponent(u.uid)}">포트폴리오 열기</a></div></div>`;
+      row.innerHTML=`<div class="row space"><div><div><strong>${esc(u.displayName||'익명')}</strong></div><div class="muted">${esc(u.email||'')} · ${esc(u.uid)}</div></div><div class="row gap8"><a class="ghost" href="u.html?uid=${encodeURIComponent(u.uid)}">포트폴리오 열기</a></div></div>`;
       box.appendChild(row);
     });
   }
 </script>
 </body>
 </html>
+
