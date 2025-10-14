@@ -171,6 +171,60 @@
     margin: 4px 0 0;
   }
   .mini{padding:6px 10px;border-radius:8px;font-size:12px}
+  .file-display {
+    margin-top: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+  }
+  .file-display-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .file-display-info img {
+    width: 60px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .file-text-info {
+    min-width: 0;
+  }
+  .file-name {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+  }
+  .download-btn {
+    flex-shrink: 0;
+    background: transparent;
+    color: var(--text-muted-color);
+    border: 1px solid var(--border-color);
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .download-btn:hover {
+    background: #f0f0f0;
+    color: var(--primary-color);
+    border-color: #ccc;
+    text-decoration: none;
+  }
 </style>
 </head>
 <body>
@@ -214,21 +268,11 @@
     </section>
   </div>
 
-  <section id="write-section" class="card" style="display:none;">
-    <h2 class="ttl">프로젝트 작성</h2>
-    <p id="write-hint" class="muted"></p>
-    <form id="form-new" class="list">
-      <input id="p-title" class="inp" placeholder="프로젝트 제목" required/>
-      <textarea id="p-desc" class="inp" placeholder="프로젝트에 대한 상세 설명" required></textarea>
-      <input id="p-tags" class="inp" placeholder="태그 (쉼표로 구분)"/>
-      <div class="row"><button type="submit">등록하기</button></div>
-    </form>
-  </section>
-
   <section class="card mt14">
     <div class="row space wrap">
       <h2 class="ttl">프로젝트 목록</h2>
     </div>
+    <div id="write-form-container"></div>
     <div id="list" class="list mt10"></div>
   </section>
 
@@ -386,8 +430,7 @@
       }catch(e){ console.warn('친구 관계 확인 중 오류:', e); }
     }
     canWrite = isOwner || isFriend || isAdmin;
-    $('#write-section').style.display = canWrite ? 'block' : 'none';
-    $('#write-hint').textContent = canWrite ? '새로운 프로젝트를 등록하여 포트폴리오를 채워보세요.' : '이 포트폴리오의 소유자 또는 공유받은 친구만 작성할 수 있습니다.';
+    setupWriteForm();
   }
   
   function setupJobSectionEditForms() {
@@ -422,6 +465,66 @@
               });
           }
       }
+  }
+
+  function setupWriteForm() {
+    const container = $('#write-form-container');
+    if (!canWrite) {
+      container.innerHTML = '';
+      return;
+    }
+    container.innerHTML = `
+      <div style="padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color);">
+        <h3 class="ttl" style="font-size: 1.2em;">새 프로젝트 작성</h3>
+        <p class="muted">새로운 프로젝트를 등록하여 포트폴리오를 채워보세요.</p>
+        <form id="form-new" class="list">
+          <input id="p-title" class="inp" placeholder="프로젝트 제목" required/>
+          <textarea id="p-desc" class="inp" placeholder="프로젝트에 대한 상세 설명" required></textarea>
+          <div class="grid cols-2">
+            <input id="p-tags" class="inp" placeholder="태그 (쉼표로 구분)"/>
+            <input id="p-file" type="file" class="inp"/>
+          </div>
+          <div class="row"><button type="submit">등록하기</button></div>
+        </form>
+      </div>`;
+
+    $('#form-new').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = $('#p-title').value.trim();
+        const desc = $('#p-desc').value.trim();
+        const tags = parseTags($('#p-tags').value);
+        const file = $('#p-file').files[0];
+
+        if (!title || !desc) return alert('제목과 설명은 필수입니다.');
+
+        try {
+          const projectsRef = db.collection('projects');
+          const docRef = await projectsRef.add({
+            ownerUid: ownerUid,
+            authorUid: me.uid,
+            authorName: me.displayName || '익명',
+            title, desc, tags,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            mainFile: null
+          });
+
+          if (file) {
+            if (file.size > 10 * 1024 * 1024) throw new Error('10MB 이하 파일만 업로드 가능합니다.');
+            const storagePath = `uploads/${ownerUid}/${docRef.id}/${Date.now()}_${file.name}`;
+            const fileRef = storage.ref(storagePath);
+            const snap = await fileRef.put(file);
+            const url = await snap.ref.getDownloadURL();
+            await docRef.update({
+              mainFile: { name: file.name, size: file.size, contentType: file.type, url, storagePath }
+            });
+          }
+          e.target.reset();
+          await loadProjects();
+        } catch (err) {
+          alert('프로젝트 등록 실패: ' + err.message);
+        }
+    });
   }
 
   async function loadProjects() {
@@ -463,8 +566,89 @@
   }
 
   function renderProjectCard(id, data, listEl) {
-    // ... This function remains unchanged from the previous complete version
+    const mine = me && (me.uid === data.authorUid);
+    const allowManage = me && (mine || isAdmin);
+    const isGalleryView = listEl.classList.contains('gallery-view');
+    
+    const card = document.createElement('article');
+    card.className = 'project';
+    card.id = `project-${id}`;
+
+    let galleryThumbnailHtml = '';
+    if (isGalleryView) {
+        if (data.mainFile && data.mainFile.contentType.startsWith('image/')) {
+            galleryThumbnailHtml = `<img src="${esc(data.mainFile.url)}" alt="${esc(data.title)}" class="project-thumbnail">`;
+        } else {
+            galleryThumbnailHtml = `<div class="project-thumbnail" style="background:#f0f0f0; display:flex; align-items:center; justify-content:center; color:#ccc;">No Image</div>`;
+        }
+    }
+    
+    let fileDisplayHtml = '';
+    if (data.mainFile) {
+        const isImage = data.mainFile.contentType.startsWith('image/');
+        fileDisplayHtml = `<div class="file-display">
+            <div class="file-display-info">
+                ${isImage ? `<img src="${esc(data.mainFile.url)}" alt="thumbnail" style="width: 60px; height: 45px; object-fit: cover; border-radius: 4px;">` : '<span style="font-size: 24px;">📄</span>'}
+                <div class="file-text-info">
+                    <a href="${esc(data.mainFile.url)}" target="_blank" rel="noopener" class="file-name">${esc(data.mainFile.name)}</a>
+                    <div class="muted small">${(data.mainFile.size / 1024).toFixed(1)} KB</div>
+                </div>
+            </div>
+            <button class="download-btn" onclick="downloadFile('${esc(data.mainFile.url)}', '${esc(data.mainFile.name)}')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+            </button>
+        </div>`;
+    }
+
+    const infoHtml = `
+      <div class="project-info">
+        <div class="row space wrap">
+          <div>
+            <h3 style="margin:0">${esc(data.title)}</h3>
+            <div class="muted small" style="margin-top:2px;">${esc(data.authorName || '익명')} · ${fmt(data.createdAt)}</div>
+          </div>
+          ${allowManage ? `<div class="manage">
+            <button class="ghost mini btn-edit">수정</button>
+            <button class="danger mini btn-del">삭제</button>
+          </div>` : ''}
+        </div>
+        <p style="margin:8px 0 0; white-space: pre-wrap;">${esc(data.desc)}</p>
+        ${fileDisplayHtml}
+        ${(data.tags && data.tags.length) ? `<div class="row wrap" style="gap:6px;margin-top:8px">${data.tags.map(t => `<span class="chip">#${esc(t)}</span>`).join('')}</div>` : ''}
+      </div>
+    `;
+
+    const commentsHtml = `
+      <div class="comments-section">
+          <h4 style="margin:0 0 8px 0; font-size: 16px;">댓글</h4>
+          <div class="list" id="comments-${id}"></div>
+          ${canWrite ? `<form class="list mt10" id="form-comment-${id}">
+              <textarea class="inp" placeholder="댓글을 입력하세요..." required style="min-height: 60px;"></textarea>
+              <div class="row"><button type="submit" class="secondary mini">등록</button></div>
+          </form>` : '<p class="muted small mt10">댓글을 작성하려면 로그인이 필요합니다.</p>'}
+      </div>`;
+
+    card.innerHTML = galleryThumbnailHtml + infoHtml + commentsHtml;
+    
+    listEl.appendChild(card);
+    
+    if (canWrite) {
+        const commentForm = card.querySelector(`#form-comment-${id}`);
+        if(commentForm) {
+            commentForm.addEventListener('submit', (e) => addComment(e, id));
+        }
+    }
+    loadComments(id);
+    
+    if (allowManage) {
+        const btnEdit = card.querySelector('.btn-edit');
+        btnEdit.onclick = () => { /* edit logic */ };
+        
+        const btnDel = card.querySelector('.btn-del');
+        btnDel.onclick = async () => { /* delete logic */ };
+    }
   }
+
 
   $('#btn-login').onclick=()=>location.href=`login.html`;
   $('#btn-logout').onclick=()=>auth.signOut();
