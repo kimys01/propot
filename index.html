@@ -217,11 +217,16 @@
   };
   $('#btn-copy').onclick=async()=>{ try { await navigator.clipboard.writeText($('#share-url').value); alert('복사 완료!'); } catch(e) { alert('복사 실패'); } };
 
-  // --- 사용자 문서 및 첫 프로젝트 생성 함수 ---
+  // --- 수정된 부분: 사용자 문서 및 첫 프로젝트 생성 함수 ---
   async function ensureUserDoc(u){
-    const userRef=db.collection('users').doc(u.uid);
-    const userSnap=await userRef.get();
-    const userData={
+    const userRef = db.collection('users').doc(u.uid);
+    const userSnap = await userRef.get();
+    
+    // 사용자가 새로운지 여부를 먼저 확인
+    const isNewUser = !userSnap.exists;
+
+    // 사용자 데이터 준비
+    const userData = {
       uid:u.uid,
       displayName:u.displayName||'익명',
       email:u.email||null,
@@ -229,17 +234,17 @@
       photoURL:u.photoURL||null,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     };
-    if(!userSnap.exists) {
-      userData.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+
+    if(isNewUser) {
+      userData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
       userData.jobRole = [];
     }
-    await userRef.set(userData,{merge:true});
+    // 사용자 문서 생성 또는 업데이트
+    await userRef.set(userData, {merge:true});
 
-    // --- 수정된 부분: 프로젝트 문서를 사용자 UID로 직접 생성 ---
-    const projectRef = db.collection('projects').doc(u.uid);
-    const projectSnap = await projectRef.get();
-    if (!projectSnap.exists) {
-        await projectRef.set({
+    // 만약 새로운 사용자라면, 샘플 프로젝트를 생성
+    if (isNewUser) {
+        await db.collection('projects').add({
             ownerUid: u.uid,
             authorUid: u.uid,
             authorName: u.displayName || '익명',
