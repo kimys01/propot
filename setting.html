@@ -17,6 +17,8 @@
     --text-color: #333;
     --text-muted-color: #666;
     --border-color: #e0e0e0;
+    --danger-color: #b91c1c;
+    --danger-hover-bg: rgba(185, 28, 28, 0.05);
   }
   *{box-sizing:border-box}
   html,body{
@@ -93,6 +95,14 @@
     color: var(--primary-color);
     border-color: var(--primary-color);
   }
+   button.danger {
+    background:transparent;
+    color: var(--danger-color);
+    border:1px solid var(--danger-color);
+  }
+  button.danger:hover {
+    background: var(--danger-hover-bg);
+  }
   .inp{
     width:100%;
     background:#ffffff;
@@ -133,6 +143,25 @@
       border: 1px solid var(--border-color);
       border-radius: 8px;
   }
+  .profile-pic-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+  }
+  .profile-pic {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      background-color: #eee;
+      border: 2px solid var(--border-color);
+  }
+  .section-divider {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-color);
+  }
 </style>
 </head>
 <body>
@@ -149,35 +178,69 @@
 
 <main class="wrap pad16" style="display: flex; justify-content: center;">
   <section id="settings-card" class="card" style="display:none;">
-    <h2 class="ttl">프로필 수정</h2>
-    <form id="settings-form" class="settings-form">
-        <div class="form-group">
-          <label for="displayName">이름 (닉네임)</label>
-          <input id="displayName" class="inp" required>
+    <h2 class="ttl">계정 정보</h2>
+    <div class="form-group">
+      <label for="email-display">아이디 (이메일)</label>
+      <input id="email-display" class="inp" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+    </div>
+
+    <div class="section-divider">
+      <h2 class="ttl">프로필 수정</h2>
+      <div class="profile-pic-container">
+        <img id="profile-pic-preview" class="profile-pic" src="https://via.placeholder.com/80" alt="프로필 사진">
+        <div>
+          <input type="file" id="profile-pic-input" accept="image/*" style="display: none;">
+          <button type="button" class="secondary" onclick="$('#profile-pic-input').click()">사진 변경</button>
+          <p class="muted" style="font-size: 12px; margin: 8px 0 0;">1MB 이하의 이미지를 권장합니다.</p>
         </div>
-        <div class="form-group">
-          <label>주요 직무 (여러 개 선택 가능)</label>
-          <div id="job-roles-group" class="checkbox-group">
-            <!-- 직무 체크박스가 여기에 동적으로 삽입됩니다. -->
+      </div>
+      <form id="settings-form" class="settings-form">
+          <div class="form-group">
+            <label for="displayName">이름 (닉네임)</label>
+            <input id="displayName" class="inp" required>
           </div>
-        </div>
+          <div class="form-group">
+            <label>주요 직무 (여러 개 선택 가능)</label>
+            <div id="job-roles-group" class="checkbox-group">
+            </div>
+          </div>
+          <div class="row">
+              <button type="submit">변경사항 저장</button>
+          </div>
+      </form>
+    </div>
+    
+    <div id="password-change-section" class="section-divider" style="display:none;">
+        <h2 class="ttl">암호 변경</h2>
+        <p class="muted">아래 버튼을 누르면 암호를 재설정할 수 있는 이메일이 발송됩니다.</p>
         <div class="row">
-            <button type="submit">변경사항 저장</button>
+            <button type="button" id="btn-reset-password" class="secondary">암호 재설정 이메일 보내기</button>
         </div>
-    </form>
+        <p id="reset-message" class="muted" style="font-size: 14px; margin-top: 10px; height: 1em;"></p>
+    </div>
+
+    <div class="section-divider">
+        <h2 class="ttl" style="color: var(--danger-color);">계정 삭제</h2>
+        <p class="muted">계정을 삭제하면 모든 데이터가 영구적으로 사라지며 복구할 수 없습니다.</p>
+        <div class="row">
+            <button type="button" id="btn-delete-account" class="danger">회원 탈퇴</button>
+        </div>
+    </div>
   </section>
 </main>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
-  const cfg={apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",authDomain:"propot-cc6bf.firebaseapp.com",projectId:"propot-cc6bf",appId:"1:30940698980:web:1729f30e68d3beb24ac271"};
+  const cfg={apiKey:"AIzaSyBofsqFmPSvocB0cBU8Azj-nMDWTB_of00",authDomain:"propot-cc6bf.firebaseapp.com",projectId:"propot-cc6bf",storageBucket:"propot-cc6bf.firebasestorage.app", appId:"1:30940698980:web:1729f30e68d3beb24ac271"};
   firebase.initializeApp(cfg);
-  const auth=firebase.auth(), db=firebase.firestore();
+  const auth=firebase.auth(), db=firebase.firestore(), storage=firebase.storage();
 
   const $=s=>document.querySelector(s);
   let me=null;
+  let newProfilePicFile = null;
 
   auth.onAuthStateChanged(async u=>{
     me=u;
@@ -190,6 +253,13 @@
     $('#user-line').textContent=`${u.displayName||'익명'}`;
     $('#my-portfolio-link').href = `u.html?uid=${u.uid}`;
     
+    const providerId = u.providerData[0]?.providerId;
+    if (providerId === 'password') {
+        $('#password-change-section').style.display = 'block';
+    } else {
+        $('#password-change-section').style.display = 'none';
+    }
+
     loadUserSettings();
     $('#settings-card').style.display = 'block';
   });
@@ -203,7 +273,10 @@
           }
           const userData = userDoc.data();
           
+          $('#email-display').value = userData.email || '이메일 정보 없음';
           $('#displayName').value = userData.displayName || '';
+          $('#profile-pic-preview').src = userData.photoURL || `https://via.placeholder.com/80?text=${(userData.displayName||'P').charAt(0)}`;
+
 
           const roles = ['designer', 'developer', 'creator', 'writer'];
           const userRoles = userData.jobRole || [];
@@ -220,6 +293,17 @@
       }
   }
 
+  $('#profile-pic-input').addEventListener('change', (e) => {
+    newProfilePicFile = e.target.files[0];
+    if (newProfilePicFile) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        $('#profile-pic-preview').src = event.target.result;
+      };
+      reader.readAsDataURL(newProfilePicFile);
+    }
+  });
+
   $('#settings-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const newName = $('#displayName').value.trim();
@@ -230,23 +314,35 @@
       }
 
       try {
-          // 1. Firestore users 컬렉션 업데이트
+          let photoURL = me.photoURL;
+          // 새 프로필 사진이 있으면 업로드
+          if (newProfilePicFile) {
+              if (newProfilePicFile.size > 1 * 1024 * 1024) {
+                  throw new Error('프로필 사진은 1MB를 초과할 수 없습니다.');
+              }
+              const storagePath = `avatars/${me.uid}/profile.jpg`;
+              const fileRef = storage.ref(storagePath);
+              const snap = await fileRef.put(newProfilePicFile);
+              photoURL = await snap.ref.getDownloadURL();
+          }
+
+          // Auth 프로필 업데이트
+          await me.updateProfile({
+              displayName: newName,
+              photoURL: photoURL
+          });
+          
+          // Firestore users 컬렉션 업데이트
           await db.collection('users').doc(me.uid).update({
               displayName: newName,
               jobRole: newRoles,
+              photoURL: photoURL,
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           
-          // 2. Firebase Auth 프로필 업데이트
-          if (me.displayName !== newName) {
-              await me.updateProfile({
-                  displayName: newName
-              });
-          }
-          
           alert('정보가 성공적으로 수정되었습니다.');
-          // 헤더의 이름도 업데이트
           $('#user-line').textContent = newName;
+          newProfilePicFile = null;
 
       } catch(err) {
           alert('정보 수정에 실패했습니다: ' + err.message);
@@ -254,6 +350,50 @@
       }
   });
 
+  $('#btn-reset-password').addEventListener('click', () => {
+    const resetButton = $('#btn-reset-password');
+    const resetMessage = $('#reset-message');
+
+    if (!me || !me.email) {
+        resetMessage.textContent = '이메일 정보가 없어 재설정할 수 없습니다.';
+        return;
+    }
+
+    resetButton.disabled = true;
+    resetMessage.textContent = '이메일을 보내는 중...';
+
+    auth.sendPasswordResetEmail(me.email)
+        .then(() => {
+            resetMessage.textContent = '✅ 암호 재설정 이메일을 보냈습니다. 받은편지함을 확인해주세요.';
+        })
+        .catch((error) => {
+            console.error("Password reset error:", error);
+            resetMessage.textContent = '오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+        })
+        .finally(() => {
+            setTimeout(() => { resetButton.disabled = false; }, 5000);
+        });
+  });
+
+  $('#btn-delete-account').addEventListener('click', async () => {
+      if (!confirm('정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, Firestore의 사용자 정보도 함께 삭제됩니다.')) {
+          return;
+      }
+      try {
+          // Firestore에서 사용자 문서 먼저 삭제
+          await db.collection('users').doc(me.uid).delete();
+          
+          // Firebase Auth에서 사용자 삭제
+          await me.delete();
+          
+          alert('계정이 성공적으로 삭제되었습니다.');
+          location.href = 'index.html';
+      } catch (error) {
+          console.error("Account deletion failed:", error);
+          alert('계정 삭제 중 오류가 발생했습니다. 재로그인 후 다시 시도해주세요.');
+      }
+  });
 </script>
 </body>
 </html>
+
