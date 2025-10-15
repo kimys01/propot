@@ -17,8 +17,9 @@
     --text-color: #333;
     --text-muted-color: #666;
     --border-color: #e0e0e0;
-    --danger-color: #b91c1c;
-    --danger-hover-bg: rgba(185, 28, 28, 0.05);
+    --danger-bg-color: #fee2e2;
+    --danger-text-color: #b91c1c;
+    --danger-border-color: #fecaca;
   }
   *{box-sizing:border-box}
   html,body{
@@ -67,10 +68,17 @@
     background-color: #ebebeb;
     color: var(--text-muted-color);
   }
-  .muted{color:var(--text-muted-color)} .ttl{margin:0 0 12px; color: var(--primary-color); font-weight: 700;}
+  .muted{color:var(--text-muted-color)}
+  .ttl{
+    margin:0 0 12px;
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 22px;
+  }
   button,input,textarea,a.secondary,a.ghost{font:inherit}
+  textarea{min-height:80px;resize:vertical}
   button, a.secondary, a.ghost {
-    padding:8px 14px;
+    padding:9px 14px;
     border:none;
     border-radius:8px;
     font-size: 14px;
@@ -85,7 +93,7 @@
     background-color:var(--primary-color);
     color:white;
   }
-   button:hover {
+  button:hover {
     background-color: var(--button-hover-color);
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
@@ -102,29 +110,30 @@
     color: var(--text-muted-color);
     border:1px solid var(--border-color);
   }
-   button.ghost:hover, a.ghost:hover {
+  button.ghost:hover, a.ghost:hover {
     background: rgba(106, 90, 205, 0.05);
     color: var(--primary-color);
     border-color: var(--primary-color);
   }
    button.danger {
-    background:transparent;
-    color: var(--danger-color);
-    border:1px solid var(--danger-color);
+    background-color: var(--danger-bg-color);
+    color: var(--danger-text-color);
+    border: 1px solid var(--danger-border-color);
   }
   button.danger:hover {
-    background: var(--danger-hover-bg);
+    background-color: #fecaca;
   }
+  .mini{padding:6px 10px;border-radius:8px;font-size:12px}
   .inp{
     width:100%;
     background:#ffffff;
     color:var(--text-color);
     border:1px solid var(--border-color);
     border-radius:8px;
-    padding:10px 12px;
+    padding:12px 14px;
     transition: all 0.2s;
   }
-   .inp:focus {
+  .inp:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2);
@@ -134,43 +143,7 @@
   @media (max-width:860px){.grid.cols-2{grid-template-columns:1fr}}
   .manage{display:flex;gap:6px;}
 
-  .gallery-view {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  }
-  .gallery-view .project { padding: 0; overflow: hidden; }
-  .gallery-view .project .project-thumbnail {
-    width: 100%; height: 200px; object-fit: cover; display: block;
-  }
-  .gallery-view .project .project-info { padding: 12px; }
-  .showreel-container {
-    position: relative; padding-bottom: 56.25%; height: 0;
-    overflow: hidden; max-width: 100%; background: #000; border-radius: 8px;
-  }
-  .showreel-container iframe {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  }
-  .article-item {
-    padding: 12px; border: 1px solid var(--border-color);
-    border-radius: 8px; transition: background-color 0.2s;
-  }
-  .article-item:hover { background-color: #f9f9f9; }
-
-  .comments-section {
-    border-top: 1px solid var(--border-color);
-    padding-top: 16px;
-    margin-top: 16px;
-  }
-  .comment-item {
-    padding: 8px 0;
-    border-bottom: 1px solid #f0f0f0;
-  }
-  .comment-item:last-child {
-    border-bottom: none;
-  }
-  .comment-item p {
-    margin: 4px 0 0;
-  }
-  .mini{padding:6px 10px;border-radius:8px;font-size:12px}
+  /* --- 수정된 스타일: 파일 첨부 및 갤러리 뷰, 댓글 --- */
   .file-display {
     margin-top: 10px;
     background-color: #f9f9f9;
@@ -186,7 +159,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    min-width: 0;
+    min-width: 0; /* 글자 넘침 방지를 위해 중요 */
   }
   .file-display-info img {
     width: 60px;
@@ -225,15 +198,51 @@
     border-color: #ccc;
     text-decoration: none;
   }
+  .download-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.7;
+  }
+
+  .gallery-view {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+  .gallery-view .project {
+    padding: 0;
+    overflow: hidden;
+  }
+  .gallery-view .project .project-thumbnail {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+  }
+  .gallery-view .project .project-info {
+    padding: 12px;
+  }
+  .comments-section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 16px;
+    margin-top: 16px;
+  }
+  .comment-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .comment-item:last-child {
+    border-bottom: none;
+  }
+  .comment-item p {
+    margin: 4px 0 0;
+  }
 </style>
 </head>
 <body>
 <header class="hdr">
   <div class="wrap row">
-    <div class="row gap8"><strong>📄 포트폴리오</strong><span id="owner-chip" class="chip"></span></div>
+    <div class="row"><strong>📄 포트폴리오</strong><span id="owner-chip" class="chip"></span></div>
     <div class="row ml-auto gap8">
-      <span id="user-line" class="muted">확인 중...</span>
-      <button id="btn-login" class="secondary" style="display:none;">로그인</button>
+      <span id="user-line" class="muted">로그인 필요</span>
+      <button id="btn-login" class="secondary">로그인</button>
       <button id="btn-logout" class="secondary" style="display:none">로그아웃</button>
       <a id="btn-home" class="secondary" href="index.html">메인</a>
       <button id="btn-copy" class="secondary">공유 링크 복사</button>
@@ -243,36 +252,24 @@
 
 <main class="wrap pad16">
   
-  <div id="job-sections" class="grid" style="gap: 12px; margin-bottom: 12px;">
-    <section id="developer-section" class="card" style="display:none;">
-      <h3 class="ttl" style="font-size: 1.2em;">💻 Developer Profile</h3>
-      <div id="developer-profile-view"></div>
-      <form id="developer-edit-form" class="list mt14" style="display:none;">
-          <input id="github-username" class="inp" placeholder="GitHub 사용자 이름 (예: torvalds)"/>
-          <div class="row"><button type="submit">GitHub 정보 저장</button></div>
-      </form>
-    </section>
-
-    <section id="creator-section" class="card" style="display:none;">
-        <h3 class="ttl" style="font-size: 1.2em;">🎬 Showreel</h3>
-        <div id="creator-showreel-view"></div>
-        <form id="creator-edit-form" class="list mt14" style="display:none;">
-            <input id="showreel-url" class="inp" placeholder="YouTube 또는 Vimeo 영상 URL"/>
-            <div class="row"><button type="submit">쇼릴 저장</button></div>
-        </form>
-    </section>
-
-    <section id="writer-section" class="card" style="display:none;">
-        <h3 class="ttl" style="font-size: 1.2em;">✍️ Featured Articles</h3>
-        <div id="writer-articles" class="list"></div>
-    </section>
-  </div>
+  <section id="write-section" class="card" style="display:none;">
+    <h2 class="ttl">프로젝트 작성</h2>
+    <p id="write-hint" class="muted"></p>
+    <form id="form-new" class="list">
+      <input id="p-title" class="inp" placeholder="프로젝트 제목" required/>
+      <textarea id="p-desc" class="inp" placeholder="프로젝트에 대한 상세 설명" required></textarea>
+      <div class="grid cols-2">
+        <input id="p-tags" class="inp" placeholder="태그 (쉼표로 구분)"/>
+        <input id="p-file" type="file" class="inp"/>
+      </div>
+      <div class="row"><button type="submit">등록하기</button></div>
+    </form>
+  </section>
 
   <section class="card mt14">
     <div class="row space wrap">
       <h2 class="ttl">프로젝트 목록</h2>
     </div>
-    <div id="write-form-container"></div>
     <div id="list" class="list mt10"></div>
   </section>
 
@@ -289,8 +286,8 @@
 
   const $=s=>document.querySelector(s);
   const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const fmt=ts=>{ if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleString(); };
   const parseTags=v=>String(v||'').split(/[, \t]+/).map(x=>x.trim().replace(/^#/,'').toLowerCase()).filter(Boolean).slice(0,10);
+  const fmt=ts=>{ if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleString(); };
 
   const params=new URLSearchParams(location.search);
   const ownerUid=params.get('uid');
@@ -302,15 +299,16 @@
   let me=null, isAdmin=false, canWrite=false;
   let ownerData = {}, loadedProjects = [];
 
-  auth.onAuthStateChanged(async user => {
-    me = user;
-    updateHeaderUI();
+  async function initializePage() {
     await loadOwnerProfile();
-    await computePermission();
-    setupJobSectionEditForms();
-    await loadProjects();
-  });
-  
+    auth.onAuthStateChanged(async user => {
+      me = user;
+      updateHeaderUI();
+      await computePermission();
+      await loadProjects();
+    });
+  }
+
   function updateHeaderUI() {
     if (me) {
       $('#user-line').textContent = `${me.displayName || '익명'}`;
@@ -318,7 +316,7 @@
       $('#btn-logout').style.display = '';
     } else {
       $('#user-line').textContent = '로그인 필요';
-      $('#btn-login').style.display = 'block';
+      $('#btn-login').style.display = '';
       $('#btn-logout').style.display = 'none';
     }
   }
@@ -329,7 +327,6 @@
       if (userDoc.exists) {
         ownerData = userDoc.data();
         $('#owner-chip').textContent = `소유자: ${ownerData.displayName || '익명'}`;
-        renderJobSections();
       } else {
         $('#owner-chip').textContent = `존재하지 않는 사용자`;
       }
@@ -338,73 +335,6 @@
       $('#owner-chip').textContent = `정보 로딩 실패`;
     }
   }
-  
-  function renderJobSections() {
-      const jobRoles = ownerData.jobRole || [];
-      $('#developer-section').style.display = jobRoles.includes('developer') ? 'block' : 'none';
-      $('#creator-section').style.display = jobRoles.includes('creator') ? 'block' : 'none';
-      $('#writer-section').style.display = jobRoles.includes('writer') ? 'block' : 'none';
-
-      if (jobRoles.includes('developer')) renderDeveloperProfile(ownerData);
-      if (jobRoles.includes('creator')) renderCreatorShowreel(ownerData);
-  }
-  
-  function renderDeveloperProfile(userData) {
-      const view = $('#developer-profile-view');
-      if (userData.githubUsername) {
-          view.innerHTML = `<a href="https://github.com/${esc(userData.githubUsername)}" target="_blank" rel="noopener">
-              <button class="secondary">🔗 GitHub @${esc(userData.githubUsername)}</button>
-          </a>`;
-      } else {
-          view.innerHTML = `<p class="muted">아직 GitHub 정보가 등록되지 않았습니다.</p>`;
-      }
-  }
-
-  function renderCreatorShowreel(userData) {
-      const view = $('#creator-showreel-view');
-      const url = userData.showreelUrl;
-      if (url) {
-          let embedUrl = '';
-          if (url.includes('youtube.com/watch?v=')) {
-              const videoId = url.split('v=')[1].split('&')[0];
-              embedUrl = `https://www.youtube.com/embed/${videoId}`;
-          } else if (url.includes('youtu.be/')) {
-              const videoId = url.split('youtu.be/')[1].split('?')[0];
-              embedUrl = `https://www.youtube.com/embed/${videoId}`;
-          } else if (url.includes('vimeo.com/')) {
-              const videoId = url.split('vimeo.com/')[1].split('?')[0];
-              embedUrl = `https://player.vimeo.com/video/${videoId}`;
-          }
-          if (embedUrl) {
-              view.innerHTML = `<div class="showreel-container"><iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe></div>`;
-          } else {
-              view.innerHTML = `<p class="muted">지원되지 않는 영상 URL 형식입니다. (YouTube, Vimeo 지원)</p>`;
-          }
-      } else {
-          view.innerHTML = `<p class="muted">아직 쇼릴 영상이 등록되지 않았습니다.</p>`;
-      }
-  }
-
-  function renderWriterArticles(projects) {
-      const container = $('#writer-articles');
-      if (!container) return;
-      container.innerHTML = '';
-      if (projects.length === 0) {
-          container.innerHTML = `<p class="muted">아직 표시할 글이 없습니다.</p>`;
-          return;
-      }
-      projects.slice(0, 3).forEach(p => { // 최대 3개만 표시
-          const item = document.createElement('a');
-          item.className = 'article-item';
-          item.href = `#project-${p.id}`;
-          item.innerHTML = `
-              <h4 style="margin:0;">${esc(p.data.title)}</h4>
-              <p class="muted small" style="margin:2px 0 0;">${esc(p.data.desc.substring(0, 80))}...</p>
-          `;
-          container.appendChild(item);
-      });
-  }
-
 
   async function computePermission(){
     if(!me){ canWrite=false; return; }
@@ -423,101 +353,10 @@
       }catch(e){ console.warn('친구 관계 확인 중 오류:', e); }
     }
     canWrite = isOwner || isFriend || isAdmin;
-    setupWriteForm();
+    $('#write-section').style.display = canWrite ? 'block' : 'none';
+    $('#write-hint').textContent = canWrite ? '새로운 프로젝트를 등록하여 포트폴리오를 채워보세요.' : '이 포트폴리오의 소유자 또는 공유받은 친구만 작성할 수 있습니다.';
   }
   
-  function setupJobSectionEditForms() {
-      if (canWrite) {
-          const devForm = $('#developer-edit-form');
-          if(devForm && $('#developer-section').style.display === 'block') {
-              devForm.style.display = 'grid';
-              $('#github-username').value = ownerData.githubUsername || '';
-              devForm.addEventListener('submit', async (e) => {
-                  e.preventDefault();
-                  const username = $('#github-username').value.trim();
-                  await db.collection('users').doc(ownerUid).update({ githubUsername: username });
-                  alert('저장되었습니다.');
-                  ownerData.githubUsername = username;
-                  renderDeveloperProfile(ownerData);
-              });
-          }
-
-          const creatorForm = $('#creator-edit-form');
-          if(creatorForm && $('#creator-section').style.display === 'block') {
-              creatorForm.style.display = 'grid';
-              $('#showreel-url').value = ownerData.showreelUrl || '';
-              creatorForm.addEventListener('submit', async (e) => {
-                  e.preventDefault();
-                  const url = $('#showreel-url').value.trim();
-                  await db.collection('users').doc(ownerUid).update({ showreelUrl: url });
-                  alert('저장되었습니다.');
-                  ownerData.showreelUrl = url;
-                  renderCreatorShowreel(ownerData);
-              });
-          }
-      }
-  }
-
-  function setupWriteForm() {
-    const container = $('#write-form-container');
-    if (!canWrite) {
-      container.innerHTML = '';
-      return;
-    }
-    container.innerHTML = `
-      <div style="padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color);">
-        <h3 class="ttl" style="font-size: 1.2em;">새 프로젝트 작성</h3>
-        <p class="muted">새로운 프로젝트를 등록하여 포트폴리오를 채워보세요.</p>
-        <form id="form-new" class="list">
-          <input id="p-title" class="inp" placeholder="프로젝트 제목" required/>
-          <textarea id="p-desc" class="inp" placeholder="프로젝트에 대한 상세 설명" required></textarea>
-          <div class="grid cols-2">
-            <input id="p-tags" class="inp" placeholder="태그 (쉼표로 구분)"/>
-            <input id="p-file" type="file" class="inp"/>
-          </div>
-          <div class="row"><button type="submit">등록하기</button></div>
-        </form>
-      </div>`;
-
-    $('#form-new').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const title = $('#p-title').value.trim();
-        const desc = $('#p-desc').value.trim();
-        const tags = parseTags($('#p-tags').value);
-        const file = $('#p-file').files[0];
-
-        if (!title || !desc) return alert('제목과 설명은 필수입니다.');
-
-        try {
-          const projectsRef = db.collection('projects');
-          const docRef = await projectsRef.add({
-            ownerUid: ownerUid,
-            authorUid: me.uid,
-            authorName: me.displayName || '익명',
-            title, desc, tags,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            mainFile: null
-          });
-
-          if (file) {
-            if (file.size > 10 * 1024 * 1024) throw new Error('10MB 이하 파일만 업로드 가능합니다.');
-            const storagePath = `uploads/${ownerUid}/${docRef.id}/${Date.now()}_${file.name}`;
-            const fileRef = storage.ref(storagePath);
-            const snap = await fileRef.put(file);
-            const url = await snap.ref.getDownloadURL();
-            await docRef.update({
-              mainFile: { name: file.name, size: file.size, contentType: file.type, url, storagePath }
-            });
-          }
-          e.target.reset();
-          await loadProjects();
-        } catch (err) {
-          alert('프로젝트 등록 실패: ' + err.message);
-        }
-    });
-  }
-
   async function loadProjects() {
     const box=$('#list');
     box.innerHTML = '<div class="muted">프로젝트를 불러오는 중...</div>';
@@ -550,22 +389,384 @@
       return;
     }
     list.forEach(({ id, data }) => renderProjectCard(id, data, listEl));
-    
-    if (ownerData.jobRole && ownerData.jobRole.includes('writer')) {
-        renderWriterArticles(list);
-    }
   }
 
   function renderProjectCard(id, data, listEl) {
-      // This function is defined in the full code block below
+    const mine = me && (me.uid === data.authorUid);
+    const allowManage = me && (mine || isAdmin);
+    const isGalleryView = listEl.classList.contains('gallery-view');
+    
+    const card = document.createElement('article');
+    card.className = 'project';
+    card.id = `project-${id}`;
+    
+    let galleryThumbnailHtml = '';
+    if (isGalleryView) {
+        if (data.mainFile && data.mainFile.contentType.startsWith('image/')) {
+            galleryThumbnailHtml = `<img src="${esc(data.mainFile.url)}" alt="${esc(data.title)}" class="project-thumbnail">`;
+        } else {
+            galleryThumbnailHtml = `<div class="project-thumbnail" style="background:#f0f0f0; display:flex; align-items:center; justify-content:center; color:#ccc;">No Image</div>`;
+        }
+    }
+    
+    let fileDisplayHtml = '';
+    if (data.mainFile) {
+        const isImage = data.mainFile.contentType.startsWith('image/');
+        fileDisplayHtml = `<div class="file-display">
+            <div class="file-display-info">
+                ${isImage ? `<img src="${esc(data.mainFile.url)}" alt="thumbnail">` : '<span style="font-size: 24px;">📄</span>'}
+                <div class="file-text-info">
+                    <a href="${esc(data.mainFile.url)}" target="_blank" rel="noopener" class="file-name">${esc(data.mainFile.name)}</a>
+                    <div class="muted small">${(data.mainFile.size / 1024).toFixed(1)} KB</div>
+                </div>
+            </div>
+            <button class="download-btn btn-download-file" data-url="${esc(data.mainFile.url)}" data-filename="${esc(data.mainFile.name)}" title="파일 다운로드">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                  <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                </svg>
+            </button>
+        </div>`;
+    }
+
+    const infoHtml = `
+      <div class="project-info">
+        <div class="row space wrap">
+          <div>
+            <h3 style="margin:0">${esc(data.title)}</h3>
+            <div class="muted small" style="margin-top:2px;">${esc(data.authorName || '익명')} · ${fmt(data.createdAt)}</div>
+          </div>
+          ${allowManage ? `<div class="manage">
+            <button class="ghost mini btn-edit">수정</button>
+            <button class="danger mini btn-del">삭제</button>
+          </div>` : ''}
+        </div>
+        <p style="margin:8px 0 0; white-space: pre-wrap;">${esc(data.desc)}</p>
+        ${fileDisplayHtml}
+        ${(data.tags && data.tags.length) ? `<div class="row wrap" style="gap:6px;margin-top:8px">${data.tags.map(t => `<span class="chip">#${esc(t)}</span>`).join('')}</div>` : ''}
+      </div>
+    `;
+
+    const commentsHtml = `
+      <div class="comments-section">
+          <h4 style="margin:0 0 8px 0; font-size: 16px;">댓글</h4>
+          <div class="list" id="comments-${id}"></div>
+          ${canWrite ? `<form class="list mt10" id="form-comment-${id}">
+              <textarea class="inp" placeholder="댓글을 입력하세요..." required style="min-height: 60px;"></textarea>
+              <div class="row"><button type="submit" class="secondary mini">등록</button></div>
+          </form>` : '<p class="muted small mt10">댓글을 작성하려면 로그인이 필요합니다.</p>'}
+      </div>`;
+
+    card.innerHTML = galleryThumbnailHtml + infoHtml + commentsHtml;
+
+    let editHtml = `
+      <form class="list edit-form" style="padding:16px;">
+        <input class="inp" value="${esc(data.title)}" required>
+        <textarea class="inp" required>${esc(data.desc)}</textarea>
+        <input class="inp" value="${(data.tags || []).join(', ')}">
+        <div class="muted small">현재 파일: ${data.mainFile ? esc(data.mainFile.name) : '없음'}</div>
+        <input type="file" class="inp file-input">
+        <div class="row gap8">
+            <button type="submit">저장</button>
+            <button type="button" class="ghost btn-cancel-edit">취소</button>
+            ${data.mainFile ? '<button type="button" class="danger mini btn-del-file">파일 삭제</button>' : ''}
+        </div>
+      </form>
+    `;
+
+    listEl.appendChild(card);
+    
+    const downloadBtn = card.querySelector('.btn-download-file');
+    if (downloadBtn) {
+        downloadBtn.onclick = async (e) => {
+            const button = e.currentTarget;
+            const url = button.dataset.url;
+            const filename = button.dataset.filename;
+            const originalContent = button.innerHTML;
+            try {
+                button.innerHTML = '...';
+                button.disabled = true;
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('파일을 다운로드할 수 없습니다.');
+                
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(blobUrl);
+                a.remove();
+
+            } catch (err) {
+                console.error('Download error:', err);
+                alert('파일 다운로드 중 오류가 발생했습니다.');
+            } finally {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+            }
+        };
+    }
+
+    if(canWrite) {
+      const commentForm = card.querySelector(`#form-comment-${id}`);
+      if(commentForm) {
+          commentForm.addEventListener('submit', (e) => addComment(e, id));
+      }
+    }
+    loadComments(id);
+
+    if (allowManage) {
+      const btnEdit = card.querySelector('.btn-edit');
+      const btnDel = card.querySelector('.btn-del');
+
+      btnEdit.onclick = () => {
+        card.innerHTML = editHtml;
+        const form = card.querySelector('.edit-form');
+        const btnCancel = card.querySelector('.btn-cancel-edit');
+        const btnDelFile = card.querySelector('.btn-del-file');
+
+        btnCancel.onclick = () => loadProjects();
+
+        if(btnDelFile) {
+            btnDelFile.onclick = async () => {
+                if (!confirm('첨부파일을 삭제하시겠습니까?')) return;
+                try {
+                    const projectRef = db.collection('projects').doc(id);
+                    if(data.mainFile.storagePath) {
+                        await storage.ref(data.mainFile.storagePath).delete();
+                    }
+                    await projectRef.update({ mainFile: null });
+                    await loadProjects();
+                } catch(err) { alert('파일 삭제 실패: '+err.message); }
+            };
+        }
+
+        form.onsubmit = async (e) => {
+          e.preventDefault();
+          const newTitle = form.children[0].value.trim();
+          const newDesc = form.children[1].value.trim();
+          const newTags = parseTags(form.children[2].value);
+          const newFile = card.querySelector('.file-input').files[0];
+
+          if (!newTitle || !newDesc) return alert('제목과 설명을 입력하세요.');
+
+          try {
+            const projectRef = db.collection('projects').doc(id);
+            const updateData = {
+              title: newTitle, desc: newDesc, tags: newTags,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (newFile) {
+              if (newFile.size > 10 * 1024 * 1024) throw new Error('10MB 이하 파일만 업로드 가능합니다.');
+              if (data.mainFile && data.mainFile.storagePath) {
+                await storage.ref(data.mainFile.storagePath).delete().catch(e => console.warn("Old file deletion failed:", e));
+              }
+              const storagePath = `uploads/${ownerUid}/${id}/${Date.now()}_${newFile.name}`;
+              const fileRef = storage.ref(storagePath);
+              const snap = await fileRef.put(newFile);
+              const url = await snap.ref.getDownloadURL();
+              updateData.mainFile = {
+                  name: newFile.name, size: newFile.size, contentType: newFile.type,
+                  url, storagePath
+              };
+            }
+            await projectRef.update(updateData);
+            await loadProjects();
+          } catch (err) { alert('수정 실패: ' + err.message); }
+        };
+      };
+
+      btnDel.onclick = async () => {
+        if (!confirm('정말로 이 프로젝트를 삭제하시겠습니까?')) return;
+        try {
+          const commentsRef = db.collection('projects').doc(id).collection('comments');
+          const commentsSnap = await commentsRef.get();
+          const batch = db.batch();
+          commentsSnap.docs.forEach(doc => batch.delete(doc.ref));
+          await batch.commit();
+
+          if (data.mainFile && data.mainFile.storagePath) {
+            await storage.ref(data.mainFile.storagePath).delete().catch(e => console.warn("File deletion failed:", e));
+          }
+          await db.collection('projects').doc(id).delete();
+          await loadProjects();
+        } catch (err) { alert('삭제 실패: ' + err.message); }
+      };
+    }
   }
 
+  async function loadComments(projectId) {
+    const box = $(`#project-${projectId} #comments-${projectId}`);
+    if (!box) return;
+    box.innerHTML = '<div class="muted small">댓글 불러오는 중...</div>';
+    try {
+      const commentsRef = db.collection('projects').doc(projectId).collection('comments');
+      const snap = await commentsRef.orderBy('createdAt', 'asc').get();
+
+      if (snap.empty) {
+        box.innerHTML = '<div class="muted small">아직 댓글이 없습니다.</div>';
+        return;
+      }
+      box.innerHTML = '';
+      snap.forEach(doc => {
+        const commentId = doc.id;
+        const data = doc.data();
+        const canManageComment = me && (me.uid === data.authorUid || me.uid === ownerUid || isAdmin);
+        const commentEl = document.createElement('div');
+        commentEl.className = 'comment-item';
+        
+        const viewHtml = `
+          <div class="comment-view">
+            <div class="row space">
+              <div class="muted small"><strong>${esc(data.authorName || '익명')}</strong> · ${fmt(data.createdAt)} ${data.updatedAt ? '(수정됨)' : ''}</div>
+              ${canManageComment ? `<div class="manage">
+                  <button class="ghost mini btn-mod-comment">수정</button>
+                  <button class="danger mini btn-del-comment">삭제</button>
+              </div>` : ''}
+            </div>
+            <p style="margin: 4px 0 0;">${esc(data.text)}</p>
+          </div>
+        `;
+        
+        const editHtml = `
+          <div class="comment-edit-view list">
+            <textarea class="inp" style="min-height: 60px;">${esc(data.text)}</textarea>
+            <div class="row gap8">
+                <button type="button" class="secondary mini btn-save-mod">저장</button>
+                <button type="button" class="ghost mini btn-cancel-mod">취소</button>
+            </div>
+          </div>
+        `;
+        
+        commentEl.innerHTML = viewHtml;
+        box.appendChild(commentEl);
+
+        if (canManageComment) {
+          const viewMode = commentEl.querySelector('.comment-view');
+          
+          const editBtn = viewMode.querySelector('.btn-mod-comment');
+          editBtn.onclick = () => {
+            commentEl.innerHTML = editHtml;
+            const editMode = commentEl.querySelector('.comment-edit-view');
+            const saveBtn = editMode.querySelector('.btn-save-mod');
+            const cancelBtn = editMode.querySelector('.btn-cancel-mod');
+
+            saveBtn.onclick = async () => {
+              const newText = editMode.querySelector('textarea').value.trim();
+              if (!newText) return alert('댓글 내용을 입력하세요.');
+              try {
+                await db.collection('projects').doc(projectId).collection('comments').doc(commentId).update({
+                  text: newText,
+                  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                loadComments(projectId);
+              } catch (err) { alert('댓글 수정 실패: ' + err.message); }
+            };
+
+            cancelBtn.onclick = () => {
+              commentEl.innerHTML = viewHtml;
+              commentEl.querySelector('.btn-mod-comment').onclick = editBtn.onclick;
+              commentEl.querySelector('.btn-del-comment').onclick = deleteBtn.onclick;
+            };
+          };
+
+          const deleteBtn = viewMode.querySelector('.btn-del-comment');
+          deleteBtn.onclick = async () => {
+            if (confirm('이 댓글을 삭제하시겠습니까?')) {
+              try {
+                await db.collection('projects').doc(projectId).collection('comments').doc(commentId).delete();
+                loadComments(projectId);
+              } catch (err) { alert('댓글 삭제 실패: ' + err.message); }
+            }
+          };
+        }
+      });
+    } catch (e) {
+      console.error("Comments load failed:", e);
+      box.innerHTML = `<div class="muted small">댓글을 불러오는 데 실패했습니다.</div>`;
+    }
+  }
+
+  async function addComment(event, projectId) {
+    event.preventDefault();
+    if (!me) {
+      alert('댓글을 작성하려면 로그인이 필요합니다.');
+      return;
+    }
+    const form = $(`#form-comment-${projectId}`);
+    const textarea = form.querySelector('textarea');
+    const text = textarea.value.trim();
+    if (!text) return;
+
+    try {
+      await db.collection('projects').doc(projectId).collection('comments').add({
+        authorUid: me.uid,
+        authorName: me.displayName || '익명',
+        text: text,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      textarea.value = '';
+      loadComments(projectId);
+    } catch (err) {
+      alert('댓글 등록 실패: ' + err.message);
+    }
+  }
 
   $('#btn-login').onclick=()=>location.href=`login.html`;
   $('#btn-logout').onclick=()=>auth.signOut();
   
   const shareUrl=`${location.origin}${location.pathname.replace('u.html', '')}u.html?uid=${encodeURIComponent(ownerUid)}`;
   $('#btn-copy').onclick=async()=>{ try { await navigator.clipboard.writeText(shareUrl); alert('공유 링크가 복사되었습니다.'); } catch(e) { alert('복사에 실패했습니다.'); } };
+
+  $('#form-new').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!canWrite) return alert('작성 권한이 없습니다.');
+
+    const title = $('#p-title').value.trim();
+    const desc = $('#p-desc').value.trim();
+    const tags = parseTags($('#p-tags').value);
+    const file = $('#p-file').files[0];
+
+    if (!title || !desc) return alert('제목과 설명은 필수입니다.');
+
+    try {
+      const projectsRef = db.collection('projects');
+      const docRef = await projectsRef.add({
+        ownerUid: ownerUid,
+        authorUid: me.uid,
+        authorName: me.displayName || '익명',
+        title, desc, tags,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        mainFile: null
+      });
+
+      if (file) {
+        if (file.size > 10 * 1024 * 1024) throw new Error('10MB 이하 파일만 업로드 가능합니다.');
+        const storagePath = `uploads/${ownerUid}/${docRef.id}/${Date.now()}_${file.name}`;
+        const fileRef = storage.ref(storagePath);
+        const snap = await fileRef.put(file);
+        const url = await snap.ref.getDownloadURL();
+        await docRef.update({
+          mainFile: {
+            name: file.name, size: file.size, contentType: file.type,
+            url, storagePath
+          }
+        });
+      }
+
+      e.target.reset();
+      await loadProjects();
+    } catch (err) {
+      alert('프로젝트 등록 실패: ' + err.message);
+    }
+  });
 
   initializePage();
 </script>
